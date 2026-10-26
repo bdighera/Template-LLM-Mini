@@ -32,7 +32,7 @@ SECRETS = [
 WRITE_COMMANDS = re.compile(r'\b(rm|mv|cp|tee|truncate|dd|ln|chmod|unlink|shred)\b|\bsed\s+(-[a-zA-Z]*i|--in-place)|\bperl\s+-[a-zA-Z]*i')
 REDIRECT = re.compile(r'>{1,2}\s*([^\s;&|<>]+)')
 DOWNLOAD = re.compile(r'\b(curl|wget|aria2c|Invoke-WebRequest|iwr)\b')
-HOOK_BYPASS = re.compile(r'\bgit\b[^;&|]*\bcommit\b[^;&|]*(--no-verify|\s-[a-zA-Z]*n\b)|core\.hooksPath')
+HOOK_BYPASS = re.compile(r'\bgit\b[^;&|]*\bcommit\b[^;&|]*(--no-verify|\s-[a-zA-Z]*n\b)|(?i:core\.hooksPath)')  # Git config keys are case-insensitive.
 
 
 def relative(path):

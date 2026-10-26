@@ -193,6 +193,7 @@ class GuardTests(HarnessTestCase):
         self.assertEqual(self.bash('rm data/raw/input.csv', code=2)['decision'], 'deny')
         self.assertEqual(self.bash('curl -O https://example.com/x.csv', code=2)['decision'], 'ask')
         self.assertEqual(self.bash('git commit --no-verify -m x', code=2)['decision'], 'deny')
+        self.assertEqual(self.bash('git -c core.hookspath=/dev/null commit -m x', code=2)['decision'], 'deny')
         self.assertEqual(self.bash('cat tasks.md .workflow/state.json')['decision'], 'allow')
         self.assertEqual(self.bash('python3 scripts/workflow.py status 2>&1')['decision'], 'allow')
 
