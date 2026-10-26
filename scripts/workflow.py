@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -424,13 +425,28 @@ def save(state):
         latest = [f'{kind}: [{Path(task[kind][-1]).name}]({task[kind][-1]})' for kind in KINDS if task.get(kind)]
         lines += ['', 'Latest evidence: ' + ('; '.join(latest) or 'none')]
     write(ROOT / 'tasks.md', '\n'.join(lines) + '\n')
-    entries = ['# Feature memories', '', 'Generated; load only relevant entries.', '']
+    entries = ['# Feature memories', '', 'Generated; load only relevant entries (`workflow.py recall "<words>"` ranks them).', '']
     for task in state['tasks']:
         for ref in task['memories']:
             entries.append(f'- {task["id"]} {task["title"]}: [{Path(ref).name}](../{ref})')
     if len(entries) == 4:
         entries.append('No project memories yet.')
     write(ROOT / 'memories/index.md', '\n'.join(entries) + '\n')
+
+
+def recall(state, query, limit):
+    """Feature memories ranked by how often they use the query's words; title matches count double."""
+    words = set(re.findall(r'\w+', query.lower()))
+    require(words and limit > 0, 'recall needs query words and a positive --limit')
+    hits = []
+    for task in state['tasks']:
+        title = sum(w in words for w in re.findall(r'\w+', task['title'].lower()))
+        for ref in task['memories']:
+            report = read(local(ref)).get('report', '')
+            score = 2 * title + sum(w in words for w in re.findall(r'\w+', report.lower()))
+            if score:
+                hits.append(dict(task=task['id'], title=task['title'], memory=ref, score=score))
+    return sorted(hits, key=lambda hit: -hit['score'])[:limit]  # ponytail: keyword scan of every memory; index it if this gets slow
 
 
 def envelope(task, **values):
@@ -716,6 +732,7 @@ def parser():
     add('validate-config').add_argument('--config', required=True)
     c = add('update-config'); c.add_argument('--config', required=True); c.add_argument('--approved', action='store_true'); c.add_argument('--preview-hash')
     add('status').add_argument('--all', action='store_true')
+    c = add('recall'); c.add_argument('query'); c.add_argument('--limit', type=int, default=5)
     add('sync-agents')
     add('install-hooks')
     c = add('guard'); c.add_argument('mode', choices=['hook', 'session', 'edit', 'bash', 'commit'])
@@ -920,7 +937,7 @@ def require_access(task, cmd):
             'work on your own task or wait for release/expiry')
 
 
-READ_ONLY = {'status', 'show', 'context', 'resume', 'validate-config', 'check', 'doctor', 'new', 'self-test'}
+READ_ONLY = {'status', 'recall', 'show', 'context', 'resume', 'validate-config', 'check', 'doctor', 'new', 'self-test'}
 # The harness's own tests; project validation commands cover project tests only.
 HARNESS_TESTS = ('scripts/tests', 'addons/data_analysis/tests')
 
@@ -1018,6 +1035,8 @@ def dispatch(args):
     if cmd == 'sync-agents':
         require(claude_enabled(config), 'claude_integration is pruned; nothing to generate')
         print('\n'.join(roles.sync(ROOT, roles.configured(ROOT, config))) or 'No Claude subagents (all roles are codex-only).'); return
+    if cmd == 'recall':
+        print(encoded(recall(state, args.query, args.limit))); return
     if cmd == 'status':
         print(encoded([task_view(t) for t in state['tasks'] if args.all or t['status'] != 'done'])); return
     if cmd == 'check':

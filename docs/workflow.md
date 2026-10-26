@@ -52,6 +52,7 @@ python3 scripts/workflow.py handoff T001 --to tester --set next_action='Run chec
 python3 scripts/workflow.py test T001
 python3 scripts/workflow.py memory T001 --file feature-memory.md
 python3 scripts/workflow.py handoff T001 --to coordinator     # attaches the latest memory
+python3 scripts/workflow.py recall 'parser cache'            # past memories ranked by keyword match
 python3 scripts/workflow.py done T001
 python3 scripts/workflow.py check
 ```
