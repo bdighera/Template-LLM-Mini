@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -59,10 +60,7 @@ def digest(value):
 
 
 def write(path, content):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + '.tmp')
-    temporary.write_text(content, encoding='utf-8')
-    temporary.replace(path)
+    coord.atomic_write(path, content)
 
 
 def dump(path, value):
@@ -562,6 +560,15 @@ def analysis_report(task, config, state, args):
         print(f'{task["id"]} resumed: {resume} (claim: {task["claim"]["agent"] if task.get("claim") else "none"})')
 
 
+# `python`/`python3` in approved commands mean the interpreter running the harness, so one
+# configuration works where only `python` or `py` exists (Windows) and inside virtualenvs.
+PYTHON = re.compile(r'python(3(\.\d+)?)?(\.exe)?')
+
+
+def portable(command):
+    return [sys.executable if PYTHON.fullmatch(command[0]) else command[0], *command[1:]]
+
+
 def run_checks(config):
     v = config['validation']
     results = []
@@ -571,7 +578,7 @@ def run_checks(config):
         # and accepts only its explicit JSON summary, never raw stderr.
         with tempfile.TemporaryFile() as output:
             try:
-                completed = subprocess.run(command, cwd=ROOT, timeout=v['timeout_seconds'],
+                completed = subprocess.run(portable(command), cwd=ROOT, timeout=v['timeout_seconds'],
                                            stdout=output if v['diagnostics'] == 'summary' else subprocess.DEVNULL,
                                            stderr=subprocess.DEVNULL)
                 result['exit_code'] = completed.returncode
@@ -776,7 +783,8 @@ def project_readme(config):
 def install_hooks():
     """Point Git at githooks/ so commit checks apply to every agent and human."""
     try:
-        inside = subprocess.run(['git', 'rev-parse', '--is-inside-work-tree'], cwd=ROOT, capture_output=True, text=True)
+        inside = subprocess.run(['git', 'rev-parse', '--is-inside-work-tree'], cwd=ROOT, capture_output=True, text=True,
+                                encoding='utf-8', errors='replace')
     except OSError:
         return 'Git not available; commit hooks not installed.'
     if inside.returncode or inside.stdout.strip() != 'true':
@@ -1242,6 +1250,10 @@ def dispatch(args):
 
 
 if __name__ == '__main__':
+    # Hook payloads and output are UTF-8; Windows otherwise uses the ANSI code page for pipes.
+    for stream in (sys.stdin, sys.stdout, sys.stderr):
+        if stream is not None:
+            stream.reconfigure(encoding='utf-8')
     try:
         sys.exit(main())
     except (ValueError, OSError, KeyError, TypeError) as exc:

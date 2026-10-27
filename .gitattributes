@@ -1,0 +1,3 @@
+# LF on every platform: evidence hashes, the append-only journal check, and
+# frontmatter parsing compare exact bytes, so Windows checkouts must not use CRLF.
+* text=auto eol=lf

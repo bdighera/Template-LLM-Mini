@@ -87,6 +87,7 @@ def sync(root, definitions):
                              GENERATED_NOTE.format(source=source), '',
                              'Shared rules: AGENTS.md. Return results to the coordinator; never edit workflow state.', '',
                              meta['body'], ''])
-        path.write_text(content, encoding='utf-8')
+        with path.open('w', encoding='utf-8', newline='\n') as handle:
+            handle.write(content)
         written.append(path.relative_to(root).as_posix())
     return written
