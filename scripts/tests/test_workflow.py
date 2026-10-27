@@ -159,6 +159,23 @@ class WorkflowTests(HarnessTestCase):
         self.assertNotIn('artifacts', view)
         self.assertEqual(view['status'], 'done')
 
+    def test_recall_ranks_memories_by_query_words(self):
+        self.prepare_testing(); self.finish()
+        self.add(); self.run_cli('start', 'T002')
+        self.handoff('reviewer', task='T002'); self.review(task='T002'); self.handoff('tester', task='T002')
+        self.run_cli('test', 'T002')
+        self.put('memory.md', 'Behavior: parser output cache. Validation: parser cache tests.\n')
+        self.run_cli('memory', 'T002', '--file', 'memory.md')
+        hits = json.loads(self.run_cli('recall', 'Parser cache').stdout)
+        self.assertEqual([hit['task'] for hit in hits], ['T002'])
+        self.assertTrue(hits[0]['memory'].startswith('memories/features/T002-'))
+        # T002 (later) outranks T001; T001 scores 2 for its title + 1 for its report.
+        ranked = json.loads(self.run_cli('recall', 'parser cache example').stdout)
+        self.assertEqual([(hit['task'], hit['score']) for hit in ranked], [('T002', 6), ('T001', 3)])
+        self.assertEqual([hit['task'] for hit in json.loads(self.run_cli('recall', 'example', '--limit', '1').stdout)], ['T001'])
+        self.assertEqual(json.loads(self.run_cli('recall', 'zebra').stdout), [])
+        self.run_cli('recall', '...', success=False)
+
     def test_assignment_logs_reference_handoffs_without_copying(self):
         self.prepare_testing()
         logged = (self.root / self.task()['prompts'][-1]).read_text()
