@@ -5,7 +5,7 @@ Codex, or both side by side): **define → build → independent QC → test →
 done**, with a shared task board, path-scoped claims, and hooks that enforce the
 rules that should never depend on a model remembering them.
 
-Python 3.11+ is enough. No model server, SDK, database, or third-party packages.
+Python v3.9, v3.12, v3.13 is enough. No model server, SDK, database, or third-party packages.
 The assistant supplies model access, delegation, and compaction.
 
 ## Layout
@@ -30,7 +30,7 @@ The assistant supplies model access, delegation, and compaction.
 
 ## Requirements
 
-Python 3.9+ and Git on Linux, macOS, or Windows. On Windows, install Git for Windows
+Python v3.9, v3.12, v3.13 and Git on Linux, WSL, or Windows. On Windows, install Git for Windows
 (the hooks run under its `sh`) and type `python` or `py` wherever these docs say
 `python3`. The hooks find a working interpreter themselves, and validation commands
 that start with `python` or `python3` run with the interpreter running the harness.
