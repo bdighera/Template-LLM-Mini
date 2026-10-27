@@ -54,6 +54,27 @@ def locked(root):
                 msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
 
 
+def atomic_write(path, content):
+    """Replace path with content (LF line endings on every platform) via a temporary file.
+
+    Windows refuses the rename while another process (editor, indexer, antivirus) has
+    the target open, so retry briefly before giving up.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + '.tmp')
+    with temporary.open('w', encoding='utf-8', newline='\n') as handle:
+        handle.write(content)
+    deadline = time.monotonic() + 5
+    while True:
+        try:
+            temporary.replace(path)
+            return
+        except PermissionError:
+            if time.monotonic() > deadline:
+                raise
+            time.sleep(0.05)
+
+
 def normalize_pattern(pattern):
     require(isinstance(pattern, str) and pattern.strip(), 'Task paths must be nonempty strings')
     path = PurePosixPath(pattern.strip().removeprefix('./'))

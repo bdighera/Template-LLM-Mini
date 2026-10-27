@@ -11,11 +11,11 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Edit|MultiEdit|Write|NotebookEdit|Bash",
+        "matcher": "Edit|MultiEdit|Write|NotebookEdit|Bash|PowerShell",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/workflow.py\" guard hook"
+            "command": "sh \"$CLAUDE_PROJECT_DIR/scripts/workflow.sh\" guard hook"
           }
         ]
       }
@@ -25,7 +25,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/workflow.py\" guard hook"
+            "command": "sh \"$CLAUDE_PROJECT_DIR/scripts/workflow.sh\" guard hook"
           }
         ]
       }

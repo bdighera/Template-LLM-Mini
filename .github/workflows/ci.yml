@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  self-test:
+    name: self-test (${{ matrix.os }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ['3.9', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Git identity for commit-hook tests
+        run: |
+          git config --global user.name ci
+          git config --global user.email ci@example.invalid
+      - name: Checkout is LF (.gitattributes)
+        shell: bash
+        run: |
+          if git ls-files --eol | grep -v '^i/none' | grep -v 'w/lf'; then
+            echo 'Files above were checked out without LF endings' >&2; exit 1
+          fi
+      - name: Harness self-test
+        run: python scripts/workflow.py self-test --verbose
+      - name: Hook launcher runs the guard
+        shell: bash
+        run: |
+          payload='{"hook_event_name":"PreToolUse","tool_name":"Write","tool_input":{"file_path":"tasks.md","content":"x"}}'
+          echo "$payload" | sh scripts/workflow.sh guard hook | tee hook.json
+          grep -q '"permissionDecision": "deny"' hook.json

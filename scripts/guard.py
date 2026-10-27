@@ -29,9 +29,12 @@ SECRETS = [
     ('Slack token', re.compile(r'\bxox[abposr]-[A-Za-z0-9-]{10,}')),
     ('credential assignment', re.compile(r'(?i)\b(api[_-]?key|secret|passwd|password|token)\b\s*[:=]\s*["\'][^"\'\s]{16,}["\']')),
 ]
-WRITE_COMMANDS = re.compile(r'\b(rm|mv|cp|tee|truncate|dd|ln|chmod|unlink|shred)\b|\bsed\s+(-[a-zA-Z]*i|--in-place)|\bperl\s+-[a-zA-Z]*i')
+WRITE_COMMANDS = re.compile(r'\b(rm|mv|cp|tee|truncate|dd|ln|chmod|unlink|shred)\b|\bsed\s+(-[a-zA-Z]*i|--in-place)|\bperl\s+-[a-zA-Z]*i'
+                            # PowerShell cmdlets and aliases, cmd.exe builtins, and .NET file writes (Windows agents).
+                            r'|(?i:\b(Remove-Item|Move-Item|Copy-Item|Rename-Item|New-Item|Set-Content|Add-Content|Clear-Content'
+                            r'|Out-File|ri|rni|ni|del|erase|rd|rmdir|ren|move|copy)\b|\[(System\.)?IO\.File\]::)')
 REDIRECT = re.compile(r'>{1,2}\s*([^\s;&|<>]+)')
-DOWNLOAD = re.compile(r'\b(curl|wget|aria2c|Invoke-WebRequest|iwr)\b')
+DOWNLOAD = re.compile(r'\b(curl|wget|aria2c)\b|(?i:\b(Invoke-WebRequest|iwr|Invoke-RestMethod|irm|Start-BitsTransfer)\b)')
 HOOK_BYPASS = re.compile(r'\bgit\b[^;&|]*\bcommit\b[^;&|]*(--no-verify|\s-[a-zA-Z]*n\b)|(?i:core\.hooksPath)')  # Git config keys are case-insensitive.
 
 
@@ -47,6 +50,8 @@ def relative(path):
 
 
 def under(rel, prefix):
+    # Casefolded: Windows and macOS filesystems ignore case, so TASKS.md is tasks.md.
+    rel, prefix = rel.casefold(), prefix.casefold()
     return rel == prefix or rel.startswith(prefix + '/')
 
 
@@ -108,7 +113,8 @@ def bash_decision(command, agent):
     targets = [relative(target) for target in REDIRECT.findall(command)]
     writes = [t for t in targets if t and (protected(t) or under(t, RAW))]
     if WRITE_COMMANDS.search(command):
-        writes += [prefix for prefix in PROTECTED + (RAW,) if prefix in command]
+        normalized = command.replace('\\', '/').casefold()  # data\raw and DATA/raw are data/raw on Windows.
+        writes += [prefix for prefix in PROTECTED + (RAW,) if prefix in normalized]
     if writes:
         return 'deny', (f'Command would modify {", ".join(sorted(set(writes)))}: workflow files change only through '
                         'scripts/workflow.py and data/raw/ is read-only.')
@@ -199,7 +205,7 @@ def hook(agent, role):
             content = (data.get('content') or data.get('new_string') or data.get('new_source')
                        or ''.join(edit.get('new_string', '') for edit in data.get('edits', [])))
             decision = edit_decision(data.get('file_path') or data.get('notebook_path'), agent, role, content)
-        elif tool == 'Bash':
+        elif tool in ('Bash', 'PowerShell'):
             decision = bash_decision(data.get('command', ''), agent)
         else:
             decision = None

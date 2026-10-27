@@ -2,4 +2,4 @@
 # Tool-agnostic backstop for Claude, Codex, and humans: journal append-only,
 # no data contents or .env files, no secrets in added lines.
 root=$(git rev-parse --show-toplevel) || exit 1
-exec python3 "$root/scripts/workflow.py" guard commit
+exec sh "$root/scripts/workflow.sh" guard commit

@@ -23,9 +23,18 @@ The assistant supplies model access, delegation, and compaction.
 | `tests/` | Project tests (empty in the template) |
 | `.claude/settings.json` | Claude Code hooks and `WORKFLOW_AGENT=claude` |
 | `githooks/pre-commit` | Tool-agnostic commit checks |
+| `scripts/workflow.sh` | Finds a working Python for the hooks (`WORKFLOW_PYTHON` overrides) |
 | `addons/data_analysis/` | Optional fetcher and analyzer roles, approved-source fetching, inspection, profiling (tests in `tests/`) |
 | `logging/` | Decision journal (`journal.jsonl` canonical, `journal.md` generated) |
 | `docs/template-history/` | How the template itself was built; delete in your project if unwanted |
+
+## Requirements
+
+Python 3.9+ and Git on Linux, macOS, or Windows. On Windows, install Git for Windows
+(the hooks run under its `sh`) and type `python` or `py` wherever these docs say
+`python3`. The hooks find a working interpreter themselves, and validation commands
+that start with `python` or `python3` run with the interpreter running the harness.
+`.gitattributes` keeps every file LF, which the evidence hashes depend on.
 
 ## Configure
 

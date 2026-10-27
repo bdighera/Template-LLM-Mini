@@ -1,7 +1,12 @@
 """Multi-agent coordination, role definitions, and hook/guard enforcement."""
 from concurrent.futures import ThreadPoolExecutor
 import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
 import sys
+import tempfile
 import unittest
 
 from harness import HarnessTestCase, SOURCE, needs_data_addon
@@ -173,7 +178,7 @@ class GuardTests(HarnessTestCase):
         self.assertEqual(self.edit('data/raw/.gitkeep', code=2)['decision'], 'deny')
         self.assertEqual(self.edit('data/raw/new.csv', code=2)['decision'], 'ask')
         self.assertEqual(self.edit('data/processed/out.csv')['decision'], 'allow')
-        self.assertEqual(self.edit('/tmp/outside.txt')['decision'], 'allow')
+        self.assertEqual(self.edit(str(Path(tempfile.gettempdir()) / 'outside.txt'))['decision'], 'allow')
 
     def test_source_edits_need_the_agents_own_claim_once_configured(self):
         self.assertEqual(self.edit('scripts/new.py')['decision'], 'allow')  # Unconfigured template.
@@ -197,6 +202,31 @@ class GuardTests(HarnessTestCase):
         self.assertEqual(self.bash('cat tasks.md .workflow/state.json')['decision'], 'allow')
         self.assertEqual(self.bash('python3 scripts/workflow.py status 2>&1')['decision'], 'allow')
 
+    def test_windows_spellings_cannot_reach_protected_files(self):
+        self.assertEqual(self.edit('TASKS.md', code=2)['decision'], 'deny')
+        self.assertEqual(self.edit('Logging/Journal.jsonl', code=2)['decision'], 'deny')
+        self.assertEqual(self.edit('Data/Raw/new.csv', code=2)['decision'], 'ask')
+        for command in ('Remove-Item data\\raw\\input.csv', 'Set-Content -Path Tasks.md -Value x',
+                        'del .workflow\\state.json', 'copy x.md memories\\index.md',
+                        '[IO.File]::WriteAllText("logging/journal.jsonl", "")'):
+            self.assertEqual(self.bash(command, code=2)['decision'], 'deny', command)
+        self.assertEqual(self.bash('Invoke-RestMethod https://example.com/x.csv -OutFile x.csv', code=2)['decision'], 'ask')
+        self.assertEqual(self.bash('Get-Content tasks.md')['decision'], 'allow')
+        payload = {'hook_event_name': 'PreToolUse', 'tool_name': 'PowerShell',
+                   'tool_input': {'command': 'Remove-Item tasks.md'}}
+        out = json.loads(self.run_cli('guard', 'hook', stdin=json.dumps(payload)).stdout)
+        self.assertEqual(out['hookSpecificOutput']['permissionDecision'], 'deny')
+
+    def test_launcher_finds_a_working_python(self):
+        if not shutil.which('sh'):
+            self.skipTest('sh is required')
+        for override in ('not-a-real-python', sys.executable):  # A broken override falls through to the search.
+            env = dict(os.environ, WORKFLOW_PYTHON=override, WORKFLOW_AGENT='claude')
+            result = subprocess.run(['sh', 'scripts/workflow.sh', 'guard', 'bash', '--command', 'echo x > tasks.md'],
+                                    cwd=self.root, capture_output=True, text=True, encoding='utf-8', env=env)
+            self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+            self.assertEqual(json.loads(result.stdout)['decision'], 'deny')
+
     def test_claude_hook_protocol(self):
         payload = {'hook_event_name': 'PreToolUse', 'tool_name': 'Write',
                    'tool_input': {'file_path': str(self.root / 'tasks.md'), 'content': 'x'}}
@@ -217,7 +247,7 @@ class GuardTests(HarnessTestCase):
         settings = json.loads((self.root / '.claude/settings.json').read_text())
         self.assertEqual(settings['env']['WORKFLOW_AGENT'], 'claude')
         commands = [h['command'] for event in settings['hooks'].values() for entry in event for h in entry['hooks']]
-        self.assertTrue(all('workflow.py' in c and 'guard' in c for c in commands))
+        self.assertTrue(all('scripts/workflow.sh' in c and 'guard' in c for c in commands))
 
 
 class CommitHookTests(HarnessTestCase):

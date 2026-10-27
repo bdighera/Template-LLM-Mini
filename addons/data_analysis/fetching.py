@@ -135,7 +135,8 @@ def fetch(root, config, name, task_id):
     known = manifest(root) | entries
     path = root / MANIFEST
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(known, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+    with path.open('w', encoding='utf-8', newline='\n') as handle:
+        handle.write(json.dumps(known, indent=2, sort_keys=True) + '\n')
     return {'source': name, 'origin': spec['origin'], 'locator': spec['locator'], 'fetched_at': fetched_at,
             'raw': [{'path': p, 'sha256': digest(root / p)} for p in raw_refs],
             'parsed': [{'path': p, 'sha256': digest(root / p)} for p in parsed_refs]}

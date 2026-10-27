@@ -216,6 +216,18 @@ class WorkflowTests(HarnessTestCase):
         content = (self.root / self.task()['tests'][-1]).read_text()
         self.assertNotIn('PRIVATE-42', content)
 
+    def test_python_in_checks_means_the_running_interpreter(self):
+        # Windows often has no `python3`; approved commands must still run there.
+        self.config['validation']['commands'] = [['python3', '-c', 'pass'], ['python', '-c', 'pass']]
+        self.put('config.json', self.config); self.prepare_testing()
+        self.run_cli('test', 'T001')
+        self.assertTrue(self.task()['test_pass'])
+
+    def test_generated_files_use_lf_on_every_platform(self):
+        self.prepare_testing(); self.run_cli('test', 'T001')
+        for name in ('tasks.md', '.workflow/state.json', 'logging/journal.jsonl', 'logging/journal.md', 'AGENTS.md'):
+            self.assertNotIn(b'\r', (self.root / name).read_bytes(), name)
+
     def test_checks_that_change_source_invalidate_their_results(self):
         self.config['validation']['commands'] = [[sys.executable, '-c',
             'from pathlib import Path; Path("example.py").write_text("changed")']]

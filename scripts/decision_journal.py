@@ -6,6 +6,8 @@ from pathlib import Path
 import re
 from urllib.parse import quote
 
+import coordination
+
 FIELDS = {'id', 'timestamp', 'type', 'task', 'agent', 'decision', 'rationale', 'alternatives',
           'outcome', 'status', 'evidence', 'supersedes'}
 LEGACY_FIELDS = FIELDS - {'agent'}  # Records written before agent identity existed.
@@ -101,10 +103,7 @@ def render(root, entries=None):
             lines += [f'Supersedes: {entry["supersedes"]}', '']
         if entry['evidence']:
             lines += ['Evidence: ' + ', '.join(f'[{markdown_text(ref)}](<../{quote(ref, safe="/")}>)' for ref in entry['evidence']), '']
-    view.parent.mkdir(parents=True, exist_ok=True)
-    temporary = local(root, 'logging/journal.md.tmp')
-    temporary.write_text('\n'.join(lines) + '\n', encoding='utf-8')
-    temporary.replace(view)
+    coordination.atomic_write(view, '\n'.join(lines) + '\n')
 
 
 def append(root, *, kind, task, decision, rationale, alternatives, outcome, status, evidence, supersedes=None, agent=None):
@@ -127,7 +126,7 @@ def append(root, *, kind, task, decision, rationale, alternatives, outcome, stat
                 outcome=outcome, status=status, evidence=evidence, supersedes=supersedes)
     canonical, _ = paths(root)
     canonical.parent.mkdir(parents=True, exist_ok=True)
-    with canonical.open('a', encoding='utf-8') as handle:
+    with canonical.open('a', encoding='utf-8', newline='\n') as handle:
         handle.write(json.dumps(item, ensure_ascii=False) + '\n')
     # The canonical append has committed. A view error must not look like an
     # unsuccessful append, including unexpected exceptions from a future renderer.

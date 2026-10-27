@@ -9,7 +9,7 @@ TEMPLATE_MARKER = '# Configure this template first'
 
 def git(root, *args):
     try:
-        result = subprocess.run(['git', *args], cwd=root, capture_output=True, text=True)
+        result = subprocess.run(['git', *args], cwd=root, capture_output=True, text=True, encoding='utf-8', errors='replace')
     except OSError:
         return None
     return result.stdout.strip() if result.returncode == 0 else None
