@@ -12,6 +12,12 @@ Read the reviewer context packet, criteria, diff, and relevant sources. Assess
 correctness, coverage, scope (changes stay inside the task's paths), and
 maintainability. Request missing context instead of guessing.
 
+Read-only reviewers may share a checkout; never switch branches in another active
+agent's working directory. Check that parallel editing agents used separate Git
+worktrees and dedicated branches, honored task/path assignments, and returned
+reviewed changes to the coordinator for integration. Worktree-local claims are
+not global locks; see docs/workflow.md.
+
 Reject unsupported facts, invented sources, and validation claims without recorded
 evidence. Check that feature work had an approved plan and that changed conventions
 are reflected in docs, roles, and tests. Check that significant choices are in the

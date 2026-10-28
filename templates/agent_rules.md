@@ -78,8 +78,13 @@ locks state, so never edit the files it owns. Set your identity with
   claims it with a lease. `claim`, `heartbeat`, `release`, and `scope` manage claims.
 - Edit only inside your own claimed paths. Another agent's claim makes its task
   and paths read-only to you; pick other work or wait for release or expiry.
-- Check the board (`tasks.md` or `status`) before starting. Use one Git branch or
-  worktree per claimed task when agents share a checkout.
+- Check the board (`tasks.md` or `status`) before starting. Each parallel agent
+  that edits repository files MUST use its own Git worktree and dedicated branch.
+  A branch alone does not isolate a shared working directory. Never switch
+  branches in another active agent's working directory. Read-only reviewers may
+  share a checkout. The coordinator integrates reviewed changes; task claims and
+  path scopes still apply. Worktree-local workflow state is not a global lock;
+  follow the coordinator/state guidance in docs/workflow.md.
 - In `cross-agent` review mode a different agent records the review. In
   `independent` mode the coordinator records a subagent's review with
   `--reviewer NAME`; never name a reviewer that did not do the review.

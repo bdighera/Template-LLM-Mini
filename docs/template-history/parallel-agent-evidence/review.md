@@ -1,0 +1,2 @@
+review_ref: e48de1bc7d4c
+Independent parallel_policy_qc: PASS. Reviewed all eight changed guidance files and checked local-claim requirements against the edit guard. Separate worktrees/branches, no switching another active directory, read-only reviewer sharing, coordinator integration, authoritative board and workers own local live claims are consistent. Local locks are not represented as global; competing workflow-state merges prohibited. Diff whitespace validation passed. Documentation-only; no new tests mirror prose. No blocking findings.

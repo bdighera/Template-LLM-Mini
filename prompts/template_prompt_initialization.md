@@ -26,6 +26,14 @@ max_concurrency, review mode); validation source roots and commands; approval
 boundaries; and which template components to prune so the project carries only
 what its use case needs.
 
+Agree a separate Git worktree and dedicated branch for each parallel agent that
+will edit repository files. Never switch branches in another active agent's
+working directory; read-only reviewers may share a checkout. Name the coordinator
+and authoritative task board: worktree-local state, locks and claims are not
+globally shared. The coordinator records authoritative workflow transitions and
+integrates reviewed source changes; workers return reports and proposed handoffs.
+Task claims and path scopes still apply.
+
 For dependencies, inspect existing packages and consider suitable maintained
 libraries before implementing equivalent functionality. Recommend new packages
 with their purpose and tradeoffs, and agree the package manager, project virtual

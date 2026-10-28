@@ -61,7 +61,25 @@ python3 scripts/workflow.py release T002
 - Expired leases can be taken over; `done` releases the claim.
 - `review_mode: cross-agent` requires a different agent to record the review.
 - Agent identity is stored on handoffs, reviews, tests, and journal entries.
-- When agents share one checkout, use a branch or `git worktree` per claimed task.
+- Each parallel agent that edits repository files MUST use its own Git worktree
+  and dedicated branch. A branch alone does not isolate a shared working directory.
+  Never switch branches in another active agent's working directory. Read-only
+  reviewers may share a checkout. The coordinator integrates reviewed changes;
+  task claims and path scopes still apply.
+
+Agree worktree paths, dedicated branches and the authoritative task board before
+parallel editing begins. Git worktrees have separate working files, including
+their own copies of `.workflow/`; workflow locks and claims are local to each copy,
+not global across worktrees. The coordinator keeps the authoritative board and
+coordinates assignments and path scopes across workers. Workers return reports
+and proposed handoffs; the coordinator records workflow transitions in that
+authoritative checkout and integrates reviewed source changes. Do not merge
+competing copies of workflow state or treat local claims as cross-worktree locks.
+Before editing, each worker must also hold a live claim under its own identity in
+its local workflow copy, covering the coordinator-assigned paths. Arrange that
+local claim through the workflow CLI; a coordinator's claim in another worktree
+does not satisfy the local guard. Keep local assignments consistent with the
+authoritative board and return reports rather than overwriting its state.
 
 ## Task flow
 
