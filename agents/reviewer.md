@@ -22,3 +22,8 @@ Start the report with the packet's `review_ref: <value>` line; the coordinator
 cannot record a review without it. Mark findings that can be deferred so they can
 become a follow-up task.
 QC is judgment, not proof; edits after review need a fresh review.
+
+Check North Star alignment and flag conflicting requests. Significant features
+need an alignment assessment before implementation and a reassessment at completion.
+Pending North Star drafts require explicit user approval and publication by the
+coordinator; never claim a draft is authoritative. See docs/workflow.md.

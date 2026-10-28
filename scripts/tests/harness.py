@@ -86,7 +86,7 @@ class HarnessTestCase(unittest.TestCase):
         self.run_cli('configure', '--config', 'config.json', '--approved')
 
     def add(self, depends=None, data='none', phases=None, paths=('example.py',), agent='claude'):
-        args = ['add', '--title', 'Example', '--criterion', 'Works', '--prompt', 'prompt.md']
+        args = ['add', '--significance', 'routine', '--title', 'Example', '--criterion', 'Works', '--prompt', 'prompt.md']
         for path in paths:
             args += ['--path', path]
         if self.data_addon:

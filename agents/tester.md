@@ -15,3 +15,8 @@ checks inside the task's paths; the coordinator runs configured checks with
 Report only executed checks and observed results; list manual checks and
 limitations separately. Structural tests do not prove factual accuracy. After
 validation passes, return final handoff content for the coordinator.
+
+Check North Star alignment and flag conflicting requests. Significant features
+need an alignment assessment before implementation and a reassessment at completion.
+Pending North Star drafts require explicit user approval and publication by the
+coordinator; never claim a draft is authoritative. See docs/workflow.md.

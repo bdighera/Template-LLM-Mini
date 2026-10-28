@@ -115,3 +115,23 @@ declare them `phase: post`.
 Configuration changes after setup use `update-config`: preview the changes and
 affected tasks, get approval, then apply with the matching `--preview-hash`.
 Changing dataset scope resets active analysis scope; unrelated edits keep it.
+
+## North Star alignment
+
+New tasks default to significant: new capabilities or changes to scope,
+architecture, users or guiding principles. Mark only narrow fixes, maintenance
+and documentation corrections `--significance routine`. Before starting a
+significant feature, record an alignment assessment with `workflow.py north-star
+assess --task TASK --file REPORT`, against approved NORTH_STAR.md or PROJECT.md.
+Flag conflicting requests before proceeding; explicit user decisions may revise
+the vision with approval and a recorded rationale.
+
+After each ten completed tasks and each significant feature completion, synthesize
+the repository into core vision, guiding principles, worthwhile capabilities,
+exclusions and drift assessment with repository evidence. Python opens a pending
+draft; agents supply judgment. Pending reviews block new starts and new claims;
+existing owners may finish. Present the exact draft for explicit approval before
+`north-star publish --approved --preview-hash HASH`, which commits the authoritative
+NORTH_STAR.md and approval record. Preserve the approved vision while drafting;
+unchanged assessments still need approval. See docs/workflow.md for recovery and
+adoption. Never treat a pending draft as approved direction.

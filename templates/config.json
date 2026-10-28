@@ -41,7 +41,7 @@
     "policy": "Built-in fields and handoffs/ directory; builder to reviewer to tester",
     "max_repairs": 2
   },
-  "tasks": "One reviewable feature per task; built-in states and evidence checks",
+  "tasks": "One reviewable feature per task; built-in states and evidence checks; significant features require North Star alignment assessment; reviews every ten completions and significant feature completion",
   "prompts": "Log feature requests, material scope changes, and assignments; retain in Git; redact secrets before writing",
   "memory": "Save a feature memory after each task; record significant decisions and milestones in logging/journal.jsonl; retrieve compact entries by default; retain history in Git",
   "tokens": "Concise outputs; compact at phase boundaries or context pressure after saving a handoff; usage only when exposed",
