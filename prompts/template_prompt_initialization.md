@@ -66,3 +66,9 @@ existing owners may finish. Present the exact draft for explicit approval before
 NORTH_STAR.md and approval record. Preserve the approved vision while drafting;
 unchanged assessments still need approval. See docs/workflow.md for recovery and
 adoption. Never treat a pending draft as approved direction.
+
+If agent communication or orchestrator assignments are needed, discuss the optional
+addons/agent_coordination component: JSON API first, MCP adapter, explicit identities
+and task permissions, local approval, authoritative checkout, private retention and
+separately approved dependencies. Default to not installed/not running; no automatic
+model calls, external transmission or agent activation. Prune it when unused.

@@ -280,3 +280,27 @@ approval process, with rationale recorded in the decision journal. Significant
 feature completion always triggers reassessment; the ten-task cadence remains a
 separate backstop. An unapproved, modified or first-discovered NORTH_STAR.md also
 requires review; an existing approved version remains in place while drafting.
+
+## Optional JSON API and MCP coordination
+
+addons/agent_coordination/README.md documents the explicitly launched local service.
+Both transports use one versioned JSON contract, sender identity and permission
+logic; no model calls or agent activation are performed. The core remains standard
+library only. The optional component requires separately approved dependencies.
+
+Local operator approval binds a planned assignment to its task scope/criteria,
+worker worktree/branch and source snapshot. Orchestrator messages cannot provide
+user consent. Acceptance runs the canonical workflow start under its existing lock
+and gates; `start --operation-id ID` records a durable `coordination_start` receipt
+with the same state write, permitting recovery after an interrupted API response.
+Repeating that start ID under the same agent returns without another mutation.
+Normal CLI starts remain unchanged. Results are findings; the coordinator still
+records review, tests, memory, lease management and completion through this CLI.
+Workers must arrange their own local claims before editing isolated worktrees.
+
+Service credentials are environment variables referenced by private settings;
+messages, grants and request receipts stay in ignored local SQLite state. Do not
+hand-edit the database, expose it remotely, or commit credentials/message contents.
+The service has no remote approval, publication, configuration update or completion
+operation. Optional tests run via self-test when dependencies exist; core-only runs
+skip them. See the component README for Windows setup and hosted validation.

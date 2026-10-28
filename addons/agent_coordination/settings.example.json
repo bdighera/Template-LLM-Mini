@@ -1,0 +1,8 @@
+{
+  "version": "1",
+  "principals": [
+    {"agent": "orchestrator", "role": "orchestrator", "token_env": "COORD_ORCHESTRATOR_TOKEN", "tasks": ["T001"]},
+    {"agent": "codex", "role": "worker", "token_env": "COORD_CODEX_TOKEN", "tasks": ["T001"]},
+    {"agent": "claude", "role": "reviewer", "token_env": "COORD_CLAUDE_TOKEN", "tasks": ["T001"]}
+  ]
+}

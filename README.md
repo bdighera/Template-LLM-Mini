@@ -32,6 +32,7 @@ environment and dependency manifest/lockfile. See the dependency policy in
 | `.claude/settings.json` | Claude Code hooks, `WORKFLOW_AGENT=claude`, and Sonnet as the default subagent model |
 | `githooks/pre-commit` | Tool-agnostic commit checks |
 | `scripts/workflow.sh` | Finds a working Python for the hooks (`WORKFLOW_PYTHON` overrides) |
+| `addons/agent_coordination/` | Optional localhost JSON API, scoped orchestrator assignments and MCP adapter (separate dependencies) |
 | `addons/data_analysis/` | Optional fetcher and analyzer roles, approved-source fetching, inspection, profiling (tests in `tests/`) |
 | `logging/` | Decision journal (`journal.jsonl` canonical, `journal.md` generated) |
 | `docs/template-history/` | How the template itself was built; delete in your project if unwanted |
@@ -125,3 +126,13 @@ existing owners may finish. Present the exact draft for explicit approval before
 NORTH_STAR.md and approval record. Preserve the approved vision while drafting;
 unchanged assessments still need approval. See docs/workflow.md for recovery and
 adoption. Never treat a pending draft as approved direction.
+
+## Optional agent coordination
+
+For agent discussion and orchestrator assignments, see
+[the coordination component](addons/agent_coordination/README.md). It offers a
+versioned HTTP/JSON API and optional MCP adapter with durable messages, separate
+agent credentials, scoped local approvals and workflow-gated task starts. It is
+explicitly launched, uses separately approved dependencies on Python 3.12/3.13,
+and does not change the dependency-free core or launch agents/models. The coordinator
+retains the authoritative task board; model findings never count as user approval.

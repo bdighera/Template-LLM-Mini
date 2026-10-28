@@ -42,3 +42,27 @@ jobs:
           payload='{"hook_event_name":"PreToolUse","tool_name":"Write","tool_input":{"file_path":"tasks.md","content":"x"}}'
           echo "$payload" | sh scripts/workflow.sh guard hook | tee hook.json
           grep -q '"permissionDecision": "deny"' hook.json
+
+  agent-coordination:
+    name: agent-coordination (${{ matrix.os }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ['3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Git identity for isolated worktree tests
+        run: |
+          git config --global user.name ci
+          git config --global user.email ci@example.invalid
+      - name: Install approved optional dependencies
+        run: python -m pip install -r addons/agent_coordination/requirements.lock
+      - name: Check dependency resolution
+        run: python -m pip check
+      - name: Full regression suite with real HTTP and MCP tests
+        run: python scripts/workflow.py self-test --verbose
