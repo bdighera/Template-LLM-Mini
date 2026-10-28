@@ -211,6 +211,20 @@ class CoordinationTests(HarnessTestCase):
             with self.assertRaises(Fault):
                 self.service.approval(self.assignment.model_copy(update=changed))
 
+    def test_relative_worktree_and_git_failures_are_workflow_faults(self):
+        relative = self.assignment.model_copy(update={'worktree': os.path.relpath(self.worker)})
+        with self.assertRaises(Fault) as caught:
+            self.service.approval(relative)
+        self.assertEqual((caught.exception.status, caught.exception.message), (409, 'Worker worktree must be an absolute path'))
+        timeout = subprocess.TimeoutExpired('git', 10)
+        with patch('bridge.subprocess.run', side_effect=timeout), self.assertRaises(Fault) as caught:
+            self.service.approval(self.assignment)
+        self.assertEqual(caught.exception.status, 409)
+        grant = self.service.approval(self.assignment)
+        with patch('bridge.subprocess.run', side_effect=timeout), self.assertRaises(Fault) as caught:
+            self.call('assign', approval_id=grant['approval_id'], assignment=self.assignment.model_dump())
+        self.assertEqual(caught.exception.status, 409)
+
     def test_http_schema_authorization_and_body_limits(self):
         origin = self.start_http(); client = Client(origin, self.tokens['worker'])
         self.assertIn('oneOf', client.request('/v1/schema'))

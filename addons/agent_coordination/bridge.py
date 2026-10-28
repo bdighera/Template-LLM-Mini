@@ -17,6 +17,17 @@ import coordination as coord
 LOCK = threading.RLock()
 
 
+def git(directory, *args):
+    """Run a verification command; failures and timeouts are workflow errors (HTTP 409), not crashes."""
+    try:
+        result = subprocess.run(['git', '-C', str(directory), *args], capture_output=True, text=True,
+                                encoding='utf-8', timeout=10)
+    except subprocess.SubprocessError as exc:
+        raise ValueError('Worktree Git verification failed') from exc
+    wf.require(result.returncode == 0, 'Worktree Git verification failed')
+    return result.stdout.strip()
+
+
 class Bridge:
     def __init__(self, root):
         self.root = Path(root).resolve(strict=True)
@@ -61,13 +72,10 @@ class Bridge:
         return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
 
     def location(self, assignment):
+        # Approvals and the service run from different directories; a relative path would differ between them.
+        wf.require(Path(assignment.worktree).is_absolute(), 'Worker worktree must be an absolute path')
         path = Path(assignment.worktree).resolve(strict=True)
         wf.require(path != self.root, 'Editing workers require a separate worktree')
-        def git(directory, *args):
-            result = subprocess.run(['git', '-C', str(directory), *args], capture_output=True, text=True,
-                                    encoding='utf-8', timeout=10)
-            wf.require(result.returncode == 0, 'Worktree Git verification failed')
-            return result.stdout.strip()
         common = Path(git(self.root, 'rev-parse', '--path-format=absolute', '--git-common-dir')).resolve()
         other = Path(git(path, 'rev-parse', '--path-format=absolute', '--git-common-dir')).resolve()
         wf.require(common == other, 'Worker must be a worktree of the authoritative repository')
@@ -82,8 +90,7 @@ class Bridge:
         wf.require(assignment.acceptance_criteria == task['criteria'], 'Acceptance criteria must match the workflow')
         wf.require(not task['claim'] or not coord.live_claim(task), 'Task already claimed')
         path = self.location(assignment)
-        head = subprocess.run(['git', '-C', str(path), 'rev-parse', 'HEAD'], capture_output=True,
-                              text=True, encoding='utf-8', check=True, timeout=10).stdout.strip()
+        head = git(path, 'rev-parse', '--verify', 'HEAD')
         canonical_stamp = self.stamp(assignment.task_id)
         _, config, _ = self.task(assignment.task_id)
         previous_root = wf.ROOT
