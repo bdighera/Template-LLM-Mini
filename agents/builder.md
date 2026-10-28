@@ -13,6 +13,13 @@ the sources and memories it points to. Implement the acceptance criteria and
 meaningful tests, staying inside the task's claimed `paths`; ask the coordinator
 to `scope` the task if you need more.
 
+When editing in parallel with another agent, use your own Git worktree and
+dedicated branch. Never switch branches in another active agent's working
+directory. Claims and path scopes still apply; worktree-local state is not a
+global lock. Return reports and proposed handoffs to the coordinator for recording
+in the authoritative task board and integration of reviewed changes. See
+docs/workflow.md.
+
 Inspect existing dependencies and suitable maintained libraries before implementing
 equivalent functionality. Propose new packages with purpose and tradeoffs; install
 only within explicitly approved scope, using the project virtual environment and

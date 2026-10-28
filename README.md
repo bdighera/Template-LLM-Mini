@@ -86,6 +86,13 @@ authenticate the user. `validate-config` lists every structural problem at once.
 The task flow, multi-agent claims, roles, hooks, configuration updates, decision
 journal, data layout, and evidence rules are in [docs/workflow.md](docs/workflow.md).
 
+Each parallel agent that edits files must have its own Git worktree and dedicated
+branch; branches alone do not isolate a shared working directory. Never switch
+branches in another active agent's working directory. Read-only reviewers may
+share a checkout. The coordinator integrates reviewed changes and coordinates the
+authoritative task board; claims and path scopes still apply. See the workflow
+reference for the limits of worktree-local state and locks.
+
 ## Validate the template
 
 ```sh

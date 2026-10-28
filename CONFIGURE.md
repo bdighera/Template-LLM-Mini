@@ -23,7 +23,7 @@ template remote, and approved fixtures.
 | Evidence | External data staged under ./data, download approvals, unknown-source handling? | ./data only; explicit download approval; "source unavailable" rather than invention |
 | Data-analysis add-on | Will tasks fetch, consume, or produce datasets that need inspection or an analyzer? | `addons.data_analysis: false`; if true, add the `analysis` section (below) |
 | Roles | Builder/reviewer/tester policies; any custom roles; which runtime plays each? | Three required roles in `agents/`; analyzer and fetcher load with the data add-on |
-| Agents | Which assistants work in parallel (Claude, Codex, ...)? Lease length? | `max_concurrency: 2` agents; `lease_minutes: 120` |
+| Agents | Which assistants work in parallel (Claude, Codex, ...)? Editing agents' separate worktrees and dedicated branches? Coordinator and authoritative task board? Lease length? | `max_concurrency: 2` agents; `lease_minutes: 120`; separate worktree and branch per parallel editing agent; read-only reviewers may share a checkout; coordinator integrates reviewed changes and maintains authoritative workflow state |
 | Review | Independent review, approved same-agent fallback, or cross-agent? Reviewer identity? | `independent` (reviewer named with `--reviewer`); `cross-agent` when two assistants are available |
 | Handoffs | Repair allowance? | Built-in fields; `max_repairs: 2` |
 | Tasks | Granularity, dependencies, path scopes, done criteria? | One reviewable feature per task with explicit `--path` globs |
@@ -86,6 +86,14 @@ Ask which assistants will run and how they should split work. Each agent needs a
 declare `--path` scopes narrow enough that parallel agents do not overlap. Confirm
 each role's `writes`, `tools`, `runtime`, `model_hint`, and `independent_of`, and
 offer custom roles (for example a documenter) as extra `agents/<role>.md` files.
+
+Each parallel editing agent needs its own Git worktree and dedicated branch.
+Never switch branches in another active agent's working directory; read-only
+reviewers may share a checkout. Agree the coordinator and authoritative task board:
+locks and claims in separate worktrees are local, not globally shared. Workers
+return reports and proposed handoffs; the coordinator records authoritative
+workflow transitions and integrates reviewed source changes. Claims and path
+scopes still apply. See docs/workflow.md before starting parallel editing.
 
 If independent agents are unavailable, ask for an independent review session or
 explicit approval of a same-agent fallback (`approved-same-agent`). Builder, QC, and

@@ -12,6 +12,13 @@ Read the tester context packet, criteria, and review evidence. Propose or write
 checks inside the task's paths; the coordinator runs configured checks with
 `workflow.py test` and records the real results.
 
+If you edit files while other agents work in parallel, use your own Git worktree
+and dedicated branch. Never switch branches in another active agent's working
+directory. Read-only review may share a checkout; validation that writes repository
+files needs an isolated worktree. Honor task/path assignments and return reports
+to the coordinator for authoritative workflow recording and reviewed integration.
+Worktree-local claims are not global locks; see docs/workflow.md.
+
 Report only executed checks and observed results; list manual checks and
 limitations separately. Structural tests do not prove factual accuracy. After
 validation passes, return final handoff content for the coordinator.
