@@ -1,0 +1,7 @@
+{
+  "local_markdown_links_and_anchors_checked": 13,
+  "workflow_command_examples_parsed": 9,
+  "template_readme_marker": "preserved",
+  "diff_whitespace_check": "passed",
+  "method": "Resolve local README Markdown targets and heading anchors; parse workflow examples with the actual argparse parser; check the template marker. No commands configured the reusable checkout."
+}
