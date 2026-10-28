@@ -212,7 +212,7 @@ class CoordinationTests(HarnessTestCase):
                 self.service.approval(self.assignment.model_copy(update=changed))
 
     def test_relative_worktree_and_git_failures_are_workflow_faults(self):
-        relative = self.assignment.model_copy(update={'worktree': os.path.relpath(self.worker)})
+        relative = self.assignment.model_copy(update={'worktree': self.worker.name})  # relpath fails across Windows drives
         with self.assertRaises(Fault) as caught:
             self.service.approval(relative)
         self.assertEqual((caught.exception.status, caught.exception.message), (409, 'Worker worktree must be an absolute path'))
