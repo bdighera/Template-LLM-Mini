@@ -280,3 +280,45 @@ approval process, with rationale recorded in the decision journal. Significant
 feature completion always triggers reassessment; the ten-task cadence remains a
 separate backstop. An unapproved, modified or first-discovered NORTH_STAR.md also
 requires review; an existing approved version remains in place while drafting.
+
+## Optional JSON API and MCP coordination
+
+addons/agent_coordination/README.md documents the explicitly launched local service.
+Both transports use one versioned JSON contract, sender identity and permission
+logic; no model calls or agent activation are performed. The core remains standard
+library only. The optional component requires separately approved dependencies.
+
+Local operator approval binds a planned assignment to its task scope/criteria,
+worker worktree/branch and source snapshot. Orchestrator messages cannot provide
+user consent. Acceptance runs the canonical workflow start under its existing lock
+and gates; `start --operation-id ID` records a durable `coordination_start` receipt
+with the same state write, permitting recovery after an interrupted API response.
+Repeating that start ID under the same agent returns without another mutation.
+Normal CLI starts remain unchanged. Results are findings; the coordinator still
+records review, tests, memory, lease management and completion through this CLI.
+Workers must arrange their own local claims before editing isolated worktrees.
+
+Service credentials are environment variables referenced by private settings;
+messages, grants and request receipts stay in ignored local SQLite state. Do not
+hand-edit the database, expose it remotely, or commit credentials/message contents.
+The service has no remote approval, publication, configuration update or completion
+operation. Optional tests run via self-test when dependencies exist; core-only runs
+skip them. See the component README for Windows setup and hosted validation.
+
+## CI validation for optional components
+
+The repository CI runs automatically on PRs to any base branch, pushes to main,
+and manual dispatch. Each matrix job is limited to 15 minutes. Core-only jobs
+retain the dependency-free self-test path. The dedicated coordination jobs on
+Linux/Windows Python 3.12/3.13 use `python scripts/ci.py coordination-status` before
+installation, then `python scripts/ci.py coordination-test` with the approved
+optional environment. This runner requires importable dependencies, an up-to-date
+committed operation schema and a nonempty suite with no skipped or failing tests.
+A normal self-test's intentional optional-dependency skips do not satisfy this lane.
+
+The status check permits an absent component only when `.workflow/config.json`
+records `agent_coordination` in `prune`. An unconfigured checkout with missing
+component files, or a partially removed component, fails instead of silently
+skipping checks. Use the configuration/update-config approval process for pruning;
+never hand-edit workflow state to make CI green. No new packages or service
+startup are needed to determine component presence.

@@ -35,6 +35,7 @@ EXCLUDED = {'.git', '.venv', 'venv', '__pycache__', '.pytest_cache', '.mypy_cach
 ROOT_EXCLUDED = {'data', '.workflow', 'handoffs', 'memories', 'logging', 'dist', 'build'}
 # Template components a project may delete once its use case is known (config.prune).
 PRUNABLE = {
+    'agent_coordination': ['addons/agent_coordination'],
     'data_analysis': ['addons/data_analysis'],  # Includes the add-on's tests.
     'template_history': ['docs/template-history'],
     'initialization_primer': ['prompts/template_prompt_initialization.md'],
@@ -727,6 +728,8 @@ def parser():
             c.add_argument('--max-chars', type=int)
         if name in ('claim', 'heartbeat', 'start'):
             c.add_argument('--ttl', type=int, help='Lease minutes (default: coordination.lease_minutes)')
+        if name == 'start':
+            c.add_argument('--operation-id', help='Durable coordination receipt for a retryable start')
         if name == 'scope':
             c.add_argument('--path', action='append', required=True)
         if name == 'fetch':
@@ -951,7 +954,7 @@ def require_access(task, cmd):
 
 READ_ONLY = {'status', 'recall', 'show', 'context', 'resume', 'validate-config', 'check', 'doctor', 'new', 'self-test'}
 # The harness's own tests; project validation commands cover project tests only.
-HARNESS_TESTS = ('scripts/tests', 'addons/data_analysis/tests')
+HARNESS_TESTS = ('scripts/tests', 'addons/data_analysis/tests', 'addons/agent_coordination/tests')
 
 
 def main(argv=None):
@@ -1103,6 +1106,10 @@ def dispatch(args):
         print(t['id']); return
     matches = [t for t in state['tasks'] if t['id'] == args.task]
     require(matches, 'Unknown task'); t = matches[0]
+    if cmd == 'start' and args.operation_id:
+        require(re.fullmatch(r'[a-zA-Z0-9_-]{1,80}', args.operation_id), 'Invalid operation ID')
+        if t.get('coordination_start') == {'operation_id': args.operation_id, 'agent': AGENT}:
+            print('Assignment start already recorded.'); return
     if cmd == 'show':
         print(encoded(task_view(t))); return
     if cmd in ('context', 'resume'):
@@ -1153,6 +1160,8 @@ def dispatch(args):
         require(all(x['status'] == 'done' for x in state['tasks'] if x['id'] in t['dependencies']), 'Dependencies incomplete')
         take_claim(t, state, config, args.ttl)
         t['status'] = 'building'
+        if args.operation_id:
+            t['coordination_start'] = {'operation_id': args.operation_id, 'agent': AGENT}
         if 'pre' in t['analysis_phases'] and not analysis_gate(t, config, state, 'pre'):
             return 2
         assignment(t, 'builder', t['prompts'][0])

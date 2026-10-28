@@ -1,0 +1,536 @@
+{
+  "$defs": {
+    "Accept": {
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "const": "1",
+          "default": "1",
+          "title": "Version",
+          "type": "string"
+        },
+        "request_id": {
+          "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "correlation_id": {
+          "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+          "title": "Correlation Id",
+          "type": "string"
+        },
+        "operation": {
+          "const": "accept",
+          "title": "Operation",
+          "type": "string"
+        },
+        "assignment_id": {
+          "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+          "title": "Assignment Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "correlation_id",
+        "operation",
+        "assignment_id"
+      ],
+      "title": "Accept",
+      "type": "object"
+    },
+    "Acknowledge": {
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "const": "1",
+          "default": "1",
+          "title": "Version",
+          "type": "string"
+        },
+        "request_id": {
+          "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "correlation_id": {
+          "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+          "title": "Correlation Id",
+          "type": "string"
+        },
+        "operation": {
+          "const": "acknowledge",
+          "title": "Operation",
+          "type": "string"
+        },
+        "message_id": {
+          "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+          "title": "Message Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "correlation_id",
+        "operation",
+        "message_id"
+      ],
+      "title": "Acknowledge",
+      "type": "object"
+    },
+    "Assign": {
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "const": "1",
+          "default": "1",
+          "title": "Version",
+          "type": "string"
+        },
+        "request_id": {
+          "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "correlation_id": {
+          "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+          "title": "Correlation Id",
+          "type": "string"
+        },
+        "operation": {
+          "const": "assign",
+          "title": "Operation",
+          "type": "string"
+        },
+        "approval_id": {
+          "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+          "title": "Approval Id",
+          "type": "string"
+        },
+        "assignment": {
+          "$ref": "#/$defs/Assignment"
+        }
+      },
+      "required": [
+        "request_id",
+        "correlation_id",
+        "operation",
+        "approval_id",
+        "assignment"
+      ],
+      "title": "Assign",
+      "type": "object"
+    },
+    "Assignment": {
+      "additionalProperties": false,
+      "properties": {
+        "task_id": {
+          "pattern": "^T[0-9]{3,}$",
+          "title": "Task Id",
+          "type": "string"
+        },
+        "recipient": {
+          "pattern": "^[a-z][a-z0-9_-]{0,31}$",
+          "title": "Recipient",
+          "type": "string"
+        },
+        "paths": {
+          "items": {
+            "maxLength": 12000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 100,
+          "minItems": 1,
+          "title": "Paths",
+          "type": "array"
+        },
+        "acceptance_criteria": {
+          "items": {
+            "maxLength": 12000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 100,
+          "minItems": 1,
+          "title": "Acceptance Criteria",
+          "type": "array"
+        },
+        "worktree": {
+          "maxLength": 12000,
+          "minLength": 1,
+          "title": "Worktree",
+          "type": "string"
+        },
+        "branch": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Branch",
+          "type": "string"
+        }
+      },
+      "required": [
+        "task_id",
+        "recipient",
+        "paths",
+        "acceptance_criteria",
+        "worktree",
+        "branch"
+      ],
+      "title": "Assignment",
+      "type": "object"
+    },
+    "Inbox": {
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "const": "1",
+          "default": "1",
+          "title": "Version",
+          "type": "string"
+        },
+        "request_id": {
+          "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "correlation_id": {
+          "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+          "title": "Correlation Id",
+          "type": "string"
+        },
+        "operation": {
+          "const": "inbox",
+          "title": "Operation",
+          "type": "string"
+        },
+        "after": {
+          "default": 0,
+          "minimum": 0,
+          "title": "After",
+          "type": "integer"
+        },
+        "limit": {
+          "default": 50,
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "request_id",
+        "correlation_id",
+        "operation"
+      ],
+      "title": "Inbox",
+      "type": "object"
+    },
+    "Inspect": {
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "const": "1",
+          "default": "1",
+          "title": "Version",
+          "type": "string"
+        },
+        "request_id": {
+          "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "correlation_id": {
+          "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+          "title": "Correlation Id",
+          "type": "string"
+        },
+        "operation": {
+          "const": "inspect",
+          "title": "Operation",
+          "type": "string"
+        },
+        "assignment_id": {
+          "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+          "title": "Assignment Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "correlation_id",
+        "operation",
+        "assignment_id"
+      ],
+      "title": "Inspect",
+      "type": "object"
+    },
+    "Register": {
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "const": "1",
+          "default": "1",
+          "title": "Version",
+          "type": "string"
+        },
+        "request_id": {
+          "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "correlation_id": {
+          "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+          "title": "Correlation Id",
+          "type": "string"
+        },
+        "operation": {
+          "const": "register",
+          "title": "Operation",
+          "type": "string"
+        },
+        "display_name": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "correlation_id",
+        "operation",
+        "display_name"
+      ],
+      "title": "Register",
+      "type": "object"
+    },
+    "Result": {
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "const": "1",
+          "default": "1",
+          "title": "Version",
+          "type": "string"
+        },
+        "request_id": {
+          "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "correlation_id": {
+          "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+          "title": "Correlation Id",
+          "type": "string"
+        },
+        "operation": {
+          "const": "result",
+          "title": "Operation",
+          "type": "string"
+        },
+        "assignment_id": {
+          "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+          "title": "Assignment Id",
+          "type": "string"
+        },
+        "outcome": {
+          "enum": [
+            "completed",
+            "needs_input",
+            "failed"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "summary": {
+          "maxLength": 12000,
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "artifact_refs": {
+          "items": {
+            "maxLength": 12000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 50,
+          "title": "Artifact Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "request_id",
+        "correlation_id",
+        "operation",
+        "assignment_id",
+        "outcome",
+        "summary"
+      ],
+      "title": "Result",
+      "type": "object"
+    },
+    "Send": {
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "const": "1",
+          "default": "1",
+          "title": "Version",
+          "type": "string"
+        },
+        "request_id": {
+          "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "correlation_id": {
+          "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+          "title": "Correlation Id",
+          "type": "string"
+        },
+        "operation": {
+          "const": "send",
+          "title": "Operation",
+          "type": "string"
+        },
+        "recipient": {
+          "pattern": "^[a-z][a-z0-9_-]{0,31}$",
+          "title": "Recipient",
+          "type": "string"
+        },
+        "task_id": {
+          "anyOf": [
+            {
+              "pattern": "^T[0-9]{3,}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Task Id"
+        },
+        "kind": {
+          "enum": [
+            "question",
+            "finding",
+            "discussion"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "body": {
+          "maxLength": 12000,
+          "minLength": 1,
+          "title": "Body",
+          "type": "string"
+        },
+        "artifact_refs": {
+          "items": {
+            "maxLength": 12000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 50,
+          "title": "Artifact Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "request_id",
+        "correlation_id",
+        "operation",
+        "recipient",
+        "kind",
+        "body"
+      ],
+      "title": "Send",
+      "type": "object"
+    },
+    "WorkflowStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "const": "1",
+          "default": "1",
+          "title": "Version",
+          "type": "string"
+        },
+        "request_id": {
+          "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "correlation_id": {
+          "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+          "title": "Correlation Id",
+          "type": "string"
+        },
+        "operation": {
+          "const": "workflow_status",
+          "title": "Operation",
+          "type": "string"
+        },
+        "task_id": {
+          "pattern": "^T[0-9]{3,}$",
+          "title": "Task Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "correlation_id",
+        "operation",
+        "task_id"
+      ],
+      "title": "WorkflowStatus",
+      "type": "object"
+    }
+  },
+  "discriminator": {
+    "mapping": {
+      "accept": "#/$defs/Accept",
+      "acknowledge": "#/$defs/Acknowledge",
+      "assign": "#/$defs/Assign",
+      "inbox": "#/$defs/Inbox",
+      "inspect": "#/$defs/Inspect",
+      "register": "#/$defs/Register",
+      "result": "#/$defs/Result",
+      "send": "#/$defs/Send",
+      "workflow_status": "#/$defs/WorkflowStatus"
+    },
+    "propertyName": "operation"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/Register"
+    },
+    {
+      "$ref": "#/$defs/Send"
+    },
+    {
+      "$ref": "#/$defs/Inbox"
+    },
+    {
+      "$ref": "#/$defs/Acknowledge"
+    },
+    {
+      "$ref": "#/$defs/Assign"
+    },
+    {
+      "$ref": "#/$defs/Accept"
+    },
+    {
+      "$ref": "#/$defs/Result"
+    },
+    {
+      "$ref": "#/$defs/Inspect"
+    },
+    {
+      "$ref": "#/$defs/WorkflowStatus"
+    }
+  ]
+}

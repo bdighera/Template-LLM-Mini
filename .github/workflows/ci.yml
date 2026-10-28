@@ -2,7 +2,6 @@ name: CI
 
 on:
   pull_request:
-    branches: [main]
   push:
     branches: [main]
   workflow_dispatch:
@@ -14,6 +13,7 @@ jobs:
   self-test:
     name: self-test (${{ matrix.os }}, Python ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -42,3 +42,34 @@ jobs:
           payload='{"hook_event_name":"PreToolUse","tool_name":"Write","tool_input":{"file_path":"tasks.md","content":"x"}}'
           echo "$payload" | sh scripts/workflow.sh guard hook | tee hook.json
           grep -q '"permissionDecision": "deny"' hook.json
+
+  agent-coordination:
+    name: agent-coordination (${{ matrix.os }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ['3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Git identity for isolated worktree tests
+        run: |
+          git config --global user.name ci
+          git config --global user.email ci@example.invalid
+      - name: Check optional component presence
+        id: component
+        run: python scripts/ci.py coordination-status --github-output
+      - name: Install approved optional dependencies
+        if: steps.component.outputs.enabled == 'true'
+        run: python -m pip install -r addons/agent_coordination/requirements.lock
+      - name: Check dependency resolution
+        if: steps.component.outputs.enabled == 'true'
+        run: python -m pip check
+      - name: Require coordination tests and current JSON schema
+        if: steps.component.outputs.enabled == 'true'
+        run: python scripts/ci.py coordination-test

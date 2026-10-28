@@ -1,0 +1,48 @@
+{
+  "task": "T005",
+  "cycle": 1,
+  "snapshot": "99bf0a018178fe4ad8fd46f2e281c02e325daef6e5f12c3fb849b13a13056191",
+  "agent": "codex",
+  "target": "coordinator",
+  "acceptance_criteria": [
+    "Versioned authenticated local JSON API, durable messaging and scoped assignments, shared MCP validation, approvals and workflow gates, portable tests and documentation"
+  ],
+  "analysis_evidence": {},
+  "objective": "Approved deterministic JSON API and optional MCP coordination with native Windows validation",
+  "files": [
+    "addons/agent_coordination/README.md",
+    "addons/agent_coordination/api.py",
+    "addons/agent_coordination/bridge.py",
+    "addons/agent_coordination/cli.py",
+    "addons/agent_coordination/client.py",
+    "addons/agent_coordination/contracts.py",
+    "addons/agent_coordination/mcp_adapter.py",
+    "addons/agent_coordination/requirements.lock",
+    "addons/agent_coordination/requirements.txt",
+    "addons/agent_coordination/schemas/operation-v1.schema.json",
+    "addons/agent_coordination/service.py",
+    "addons/agent_coordination/settings.example.json",
+    "addons/agent_coordination/tests/test_service.py",
+    ".github/workflows/ci.yml",
+    ".gitignore",
+    "CONFIGURE.md",
+    "README.md",
+    "agents/builder.md",
+    "agents/reviewer.md",
+    "agents/tester.md",
+    "docs/workflow.md",
+    "prompts/template_prompt_initialization.md",
+    "scripts/tests/harness.py",
+    "scripts/tests/test_workflow.py",
+    "scripts/workflow.py",
+    "templates/agent_rules.md"
+  ],
+  "memories": [
+    "memories/features/T005-memories-20261028T103437638602Z.json"
+  ],
+  "decisions": "FastAPI/Pydantic/Uvicorn+official MCP SDK optional pinned libraries; SQLite local storage; no model launching/external calls; exact local approval and canonical durable workflow receipts",
+  "changes": "Local authenticated service, versioned schema/OpenAPI, peer messaging, scoped grants/assignments/results, HTTP/MCP parity, core retry receipt and portable tests/CI/docs",
+  "validation": "Independent security QC followed by full core+optional regression, dependency checks, real HTTP/MCP exchanges and hosted Windows/Linux matrix",
+  "unresolved": "No blocking findings; user Windows-machine setup and real orchestrator interoperability remain untested",
+  "next_action": "Return PR 9 with native Windows and Linux validation records; do not merge"
+}

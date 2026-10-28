@@ -19,8 +19,9 @@ def harness_files(source):
     names = ['.gitignore', '.gitattributes', 'AGENTS.md', 'CLAUDE.md', 'README.md', 'CONFIGURE.md', 'docs/workflow.md',
              'prompts/template_prompt_initialization.md', '.claude/settings.json', 'tests/.gitkeep']
     for folder in ('scripts', 'templates', 'agents', 'addons', 'githooks'):
-        names += [p.relative_to(source).as_posix() for p in (source / folder).rglob('*')
-                  if p.is_file() and '__pycache__' not in p.parts]
+        for directory, dirs, files in os.walk(source / folder):
+            dirs[:] = [d for d in dirs if d not in {'.venv', 'venv', '__pycache__', '.pytest_cache'}]
+            names += [(Path(directory) / name).relative_to(source).as_posix() for name in files]
     names += [f'data/{folder}/.gitkeep' for folder in ('raw', 'processed', 'generated')]
     return [name for name in names if (source / name).is_file()]
 

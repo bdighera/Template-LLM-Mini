@@ -1,0 +1,33 @@
+{
+  "task": "T006",
+  "cycle": 0,
+  "snapshot": "772712fa82c368af0e6aa50b5fbd6ed8adf997f38b8cc01a858ee3dcafd5ebd1",
+  "agent": "codex",
+  "target": "coordinator",
+  "acceptance_criteria": [
+    "CI runs on stacked PRs, enforces optional tests and schema freshness, safely handles explicit pruning and bounds job runtime"
+  ],
+  "analysis_evidence": {},
+  "objective": "Harden stacked PR and optional component CI validation",
+  "files": [
+    "scripts/ci.py",
+    "scripts/tests/test_ci.py",
+    ".github/workflows/ci.yml",
+    "CONFIGURE.md",
+    "README.md",
+    "addons/agent_coordination/README.md",
+    "agents/tester.md",
+    "docs/workflow.md",
+    "prompts/template_prompt_initialization.md",
+    "scripts/tests/test_workflow.py",
+    "templates/agent_rules.md"
+  ],
+  "memories": [
+    "memories/features/T006-memories-20261028T105548837237Z.json"
+  ],
+  "decisions": "One stdlib CI helper handles presence, explicit pruning, schema freshness and no-skip test execution; core and strict optional lanes remain separate with 15-minute limits",
+  "changes": "Unfiltered PR triggers, optional presence outputs/conditional installation, strict runner and eight boundary regressions, updated discovery coverage and guidance",
+  "validation": "Independent ci_hardening_qc passed; run full WSL regression, strict runner and automatic Linux/Windows CI for updated PR9",
+  "unresolved": "none",
+  "next_action": "Return updated PR9 with automatic strict CI and successful Windows/Linux evidence; do not merge"
+}

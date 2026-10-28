@@ -4,7 +4,7 @@ import subprocess
 import sys
 import unittest
 
-from harness import DATA_ADDON, HarnessTestCase
+from harness import DATA_ADDON, HarnessTestCase, SOURCE
 
 
 class WorkflowTests(HarnessTestCase):
@@ -499,11 +499,27 @@ class WorkflowTests(HarnessTestCase):
         self.assertEqual((self.root / 'README.md').read_text(), '# Existing project\n')
 
     def test_self_test_covers_harness_test_folders(self):
-        for folder in ('scripts/tests', 'addons/data_analysis/tests'):
+        for folder in ('scripts/tests', 'addons/data_analysis/tests', 'addons/agent_coordination/tests'):
             self.assertIn(f"'{folder}'", (self.root / 'scripts/workflow.py').read_text())
-            if folder == 'scripts/tests' or DATA_ADDON:
+            if (SOURCE / folder).is_dir():
                 self.assertTrue(list((self.root / folder).glob('test_*.py')), folder)
         self.assertEqual([p.name for p in (self.root / 'tests').iterdir()], ['.gitkeep'])
+
+    def test_coordination_start_receipt_is_durable_and_actor_bound(self):
+        self.configure(); self.add()
+        self.run_cli('start', 'T001', '--operation-id', 'durable-assignment')
+        before = self.task()
+        self.run_cli('start', 'T001', '--operation-id', 'durable-assignment')
+        self.assertEqual(self.task(), before)
+        self.run_cli('start', 'T001', '--operation-id', 'durable-assignment', agent='codex', success=False)
+        self.run_cli('start', 'T001', '--operation-id', 'different-assignment', success=False)
+        self.assertEqual(self.task(), before)
+
+    def test_failed_coordination_start_does_not_record_receipt(self):
+        self.configure(); self.add(); self.add(depends='T001', paths=('other.py',))
+        self.run_cli('start', 'T002', '--operation-id', 'blocked-assignment', success=False)
+        self.assertNotIn('coordination_start', self.task(1))
+        self.assertEqual(self.task(1)['status'], 'planned')
 
 
 if __name__ == '__main__':
