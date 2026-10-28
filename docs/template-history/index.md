@@ -27,3 +27,5 @@ Prompt 002 (initialization prompt) produced the primer, not a feature memory.
 - [Optional agent coordination and Windows validation](memories/016-agent-coordination.md)
 
 - [Strict coordination CI and stacked PR checks](memories/017-coordination-ci-hardening.md)
+
+- [Current-feature README and accuracy QC](memories/018-current-feature-readme.md)

@@ -1,0 +1,23 @@
+{
+  "task": "T007",
+  "cycle": 1,
+  "snapshot": "3468ddb0f2032de7cf2e247136dc89d071652dd6892142b4be54376d7d241184",
+  "agent": "codex",
+  "target": "coordinator",
+  "acceptance_criteria": [
+    "README accurately covers all current core/add-on features and setup, with working links and verified commands and independent QC"
+  ],
+  "analysis_evidence": {},
+  "objective": "Accurate README covering all current template features",
+  "files": [
+    "README.md"
+  ],
+  "memories": [
+    "memories/features/T007-memories-20261028T111131092415Z.json"
+  ],
+  "decisions": "Organize verified current functionality by core workflow, policy/evidence limits, optional components and validation; link detailed guides and avoid volatile test totals in README.",
+  "changes": "Rewritten current-feature overview, accurate setup/requirements, worktree/claim boundaries, NorthStar cadence, data-analysis and coordination capabilities, CI and repository map.",
+  "validation": "13 local links/anchors and nine CLI examples checked; independent content accuracy review then full regression and automatic PR CI.",
+  "unresolved": "none",
+  "next_action": "Open README documentation PR, verify automatic checks, then stop as requested; do not merge other PRs"
+}
