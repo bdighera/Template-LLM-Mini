@@ -193,11 +193,22 @@ agent connectors require their own approved integration and data-sharing scope.
 ## Validation and retained state
 
 ```sh
-python -m unittest discover -s addons/agent_coordination/tests -v
+python scripts/ci.py coordination-status
+python scripts/ci.py coordination-test
 python scripts/workflow.py self-test
 ```
 
 Core-only self-tests skip the optional tests when the dependencies are absent.
+The dedicated optional CI job uses `scripts/ci.py coordination-test`, which requires
+the dependencies, an up-to-date committed operation schema, a nonempty test suite,
+and zero skipped or failing tests. It does not install packages automatically.
+`coordination-status` uses the standard library and lets CI skip installation only
+when `.workflow/config.json` explicitly lists `agent_coordination` in `prune` and
+the directory is absent. Missing files/tests or unrecorded removal fail CI.
+All PR target branches (including stacked PRs) trigger the matrices automatically;
+each job has a 15-minute limit. Core jobs run the harness/data regressions and
+optional jobs separately require the coordination integration suite. Pushes to
+main and manual workflow dispatch remain supported.
 The optional suite uses real SQLite, Git worktrees, HTTP and an MCP stdio client;
 no model/provider calls are made. Installation and live-platform support are
 separate from validating interoperability with a particular orchestrator or host.

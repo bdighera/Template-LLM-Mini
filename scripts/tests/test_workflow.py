@@ -4,7 +4,7 @@ import subprocess
 import sys
 import unittest
 
-from harness import DATA_ADDON, HarnessTestCase
+from harness import DATA_ADDON, HarnessTestCase, SOURCE
 
 
 class WorkflowTests(HarnessTestCase):
@@ -499,9 +499,9 @@ class WorkflowTests(HarnessTestCase):
         self.assertEqual((self.root / 'README.md').read_text(), '# Existing project\n')
 
     def test_self_test_covers_harness_test_folders(self):
-        for folder in ('scripts/tests', 'addons/data_analysis/tests'):
+        for folder in ('scripts/tests', 'addons/data_analysis/tests', 'addons/agent_coordination/tests'):
             self.assertIn(f"'{folder}'", (self.root / 'scripts/workflow.py').read_text())
-            if folder == 'scripts/tests' or DATA_ADDON:
+            if (SOURCE / folder).is_dir():
                 self.assertTrue(list((self.root / folder).glob('test_*.py')), folder)
         self.assertEqual([p.name for p in (self.root / 'tests').iterdir()], ['.gitkeep'])
 

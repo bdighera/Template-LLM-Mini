@@ -49,7 +49,7 @@ preview lists every path) and cannot be undone except through Git.
 
 | `prune` entry | Removes | Recommend removing when |
 |---|---|---|
-| `agent_coordination` | `addons/agent_coordination/` and its optional tests/dependency manifests | No API/MCP communication or orchestrator assignments are needed |
+| `agent_coordination` | `addons/agent_coordination/` and its optional tests/dependency manifests; CI recognizes the recorded prune choice | No API/MCP communication or orchestrator assignments are needed |
 | `data_analysis` | `addons/data_analysis/`, the analyzer and fetcher roles, their tests | Tasks never fetch, inspect, or analyze datasets (`addons.data_analysis` must be false) |
 | `template_history` | `docs/template-history/` | Almost always; it records how the template was built |
 | `initialization_primer` | `prompts/template_prompt_initialization.md` | Almost always once configured |
@@ -150,3 +150,7 @@ Optional coordination setup and platform-specific commands are documented in
 addons/agent_coordination/README.md. Its settings are separate local operational
 settings; workflow configuration schema version 2 is unchanged. Add retained
 coordination sources and dependency manifests to validation.source_paths.
+
+CI permits skipping a missing coordination component only after approved pruning
+is recorded in workflow configuration. Retained coordination components require
+installed dependencies, non-skipped integration tests and a current generated schema.

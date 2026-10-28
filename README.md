@@ -101,6 +101,11 @@ python3 scripts/workflow.py self-test
 ```
 
 The harness tests use isolated temporary copies and make no provider calls.
+CI runs for PRs targeting any branch, including stacked PRs, with 15-minute job
+limits. Its optional coordination lane uses `scripts/ci.py coordination-status`
+and `coordination-test`: a retained component must have dependencies, tests that
+execute without skips, and a committed schema matching its generator. Only an
+explicit workflow `prune` entry permits skipping a removed component.
 
 ## License
 

@@ -304,3 +304,21 @@ hand-edit the database, expose it remotely, or commit credentials/message conten
 The service has no remote approval, publication, configuration update or completion
 operation. Optional tests run via self-test when dependencies exist; core-only runs
 skip them. See the component README for Windows setup and hosted validation.
+
+## CI validation for optional components
+
+The repository CI runs automatically on PRs to any base branch, pushes to main,
+and manual dispatch. Each matrix job is limited to 15 minutes. Core-only jobs
+retain the dependency-free self-test path. The dedicated coordination jobs on
+Linux/Windows Python 3.12/3.13 use `python scripts/ci.py coordination-status` before
+installation, then `python scripts/ci.py coordination-test` with the approved
+optional environment. This runner requires importable dependencies, an up-to-date
+committed operation schema and a nonempty suite with no skipped or failing tests.
+A normal self-test's intentional optional-dependency skips do not satisfy this lane.
+
+The status check permits an absent component only when `.workflow/config.json`
+records `agent_coordination` in `prune`. An unconfigured checkout with missing
+component files, or a partially removed component, fails instead of silently
+skipping checks. Use the configuration/update-config approval process for pruning;
+never hand-edit workflow state to make CI green. No new packages or service
+startup are needed to determine component presence.

@@ -159,3 +159,9 @@ workers need their own worktree/branch and local claims, and the coordinator rec
 review, tests and completion. No automatic model calls or agent launches are enabled.
 New external integrations still need approved credentials and data-sharing scope.
 Read addons/agent_coordination/README.md when this optional component is retained.
+
+For retained optional coordination components, use `scripts/ci.py coordination-test`
+in their approved environment to require actual execution without skipped tests
+and verify committed schema freshness. Core self-test skips are not equivalent to
+this strict check. CI recognizes removal only through an explicit approved `prune`
+entry; never remove files or alter state to evade the check. See docs/workflow.md.

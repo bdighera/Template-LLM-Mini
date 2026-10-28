@@ -72,3 +72,7 @@ addons/agent_coordination component: JSON API first, MCP adapter, explicit ident
 and task permissions, local approval, authoritative checkout, private retention and
 separately approved dependencies. Default to not installed/not running; no automatic
 model calls, external transmission or agent activation. Prune it when unused.
+
+If coordination is retained, include its strict CI runner, dependency manifests and
+schema freshness in the validation plan. If pruned, preserve the approved `prune`
+record so CI can distinguish deliberate removal from an incomplete checkout.
