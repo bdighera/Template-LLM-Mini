@@ -1,0 +1,21 @@
+test_accept_starts_once_and_result_is_not_workflow_completion (test_service.CoordinationTests.test_accept_starts_once_and_result_is_not_workflow_completion) ... ok
+test_assignment_requires_exact_local_approval (test_service.CoordinationTests.test_assignment_requires_exact_local_approval) ... ok
+test_current_permissions_on_replay_and_queued_accept (test_service.CoordinationTests.test_current_permissions_on_replay_and_queued_accept) ... ok
+test_duplicate_concurrent_requests_and_restart (test_service.CoordinationTests.test_duplicate_concurrent_requests_and_restart) ... ok
+test_expired_approval_and_worktree_scope_rejected (test_service.CoordinationTests.test_expired_approval_and_worktree_scope_rejected) ... ok
+test_http_schema_authorization_and_body_limits (test_service.CoordinationTests.test_http_schema_authorization_and_body_limits) ... ok
+test_large_inbox_and_strict_json_transport (test_service.CoordinationTests.test_large_inbox_and_strict_json_transport) ... ok
+test_messages_acknowledgement_and_scopes (test_service.CoordinationTests.test_messages_acknowledgement_and_scopes) ... ok
+test_operator_approval_needs_no_server_tokens (test_service.CoordinationTests.test_operator_approval_needs_no_server_tokens) ... ok
+test_real_mcp_stdio_matches_http_and_denies_approval (test_service.CoordinationTests.test_real_mcp_stdio_matches_http_and_denies_approval) ... ok
+test_revoked_inbox_rows_do_not_starve_authorized_messages (test_service.CoordinationTests.test_revoked_inbox_rows_do_not_starve_authorized_messages) ... ok
+test_stale_source_and_worker_branch_rejected (test_service.CoordinationTests.test_stale_source_and_worker_branch_rejected) ... ok
+test_strict_schema_and_identity (test_service.CoordinationTests.test_strict_schema_and_identity) ... ok
+test_workflow_commit_before_service_receipt_recovers (test_service.CoordinationTests.test_workflow_commit_before_service_receipt_recovers) ... ok
+test_workflow_north_star_and_significance_gates_preserved (test_service.CoordinationTests.test_workflow_north_star_and_significance_gates_preserved) ... ok
+
+----------------------------------------------------------------------
+Ran 15 tests in 4.650s
+
+OK
+{"component": "agent_coordination", "enabled": true, "reason": "present", "schema": "current", "skipped": 0, "tests_run": 15}
