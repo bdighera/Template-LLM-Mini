@@ -23,7 +23,7 @@ template remote, and approved fixtures.
 | Evidence | External data staged under ./data, download approvals, unknown-source handling? | ./data only; explicit download approval; "source unavailable" rather than invention |
 | Data-analysis add-on | Will tasks fetch, consume, or produce datasets that need inspection or an analyzer? | `addons.data_analysis: false`; if true, add the `analysis` section (below) |
 | Roles | Builder/reviewer/tester policies; any custom roles; which runtime plays each? | Three required roles in `agents/`; analyzer and fetcher load with the data add-on |
-| Agent coordination | Is the optional localhost JSON API/MCP adapter needed? Authoritative checkout, allowed identities/roles/tasks, credentials, retention and approved dependencies? | Disabled unless explicitly installed and launched; polling; no model calls or agent launches; prune `agent_coordination` when unused |
+| Agent coordination | Is the optional localhost JSON API/MCP adapter needed? Authoritative checkout, allowed identities/roles/tasks, credentials, retention and approved dependencies? | Prune `agent_coordination` by default; keep it only when several agents will run at the same time and need messaging or orchestrator assignments. If kept: not running until explicitly installed and launched; polling; no model calls or agent launches |
 | Agents | Which assistants work in parallel (Claude, Codex, ...)? Editing agents' separate worktrees and dedicated branches? Coordinator and authoritative task board? Lease length? | `max_concurrency: 2` agents; `lease_minutes: 120`; separate worktree and branch per parallel editing agent; read-only reviewers may share a checkout; coordinator integrates reviewed changes and maintains authoritative workflow state |
 | Review | Independent review, approved same-agent fallback, or cross-agent? Reviewer identity? | `independent` (reviewer named with `--reviewer`); `cross-agent` when two assistants are available |
 | Handoffs | Repair allowance? | Built-in fields; `max_repairs: 2` |
@@ -49,7 +49,7 @@ preview lists every path) and cannot be undone except through Git.
 
 | `prune` entry | Removes | Recommend removing when |
 |---|---|---|
-| `agent_coordination` | `addons/agent_coordination/` and its optional tests/dependency manifests; CI recognizes the recorded prune choice | No API/MCP communication or orchestrator assignments are needed |
+| `agent_coordination` | `addons/agent_coordination/` and its optional tests/dependency manifests; CI recognizes the recorded prune choice | By default; keep it only when several agents will run at the same time and need API/MCP messaging or orchestrator assignments |
 | `data_analysis` | `addons/data_analysis/`, the analyzer and fetcher roles, their tests | Tasks never fetch, inspect, or analyze datasets (`addons.data_analysis` must be false) |
 | `template_history` | `docs/template-history/` | Almost always; it records how the template was built |
 | `initialization_primer` | `prompts/template_prompt_initialization.md` | Almost always once configured |

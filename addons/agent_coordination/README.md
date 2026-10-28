@@ -44,7 +44,9 @@ Use a **configured** project as the authoritative workflow root; do not configur
 the reusable template merely to run this service. Keep the service's local settings
 under `.workflow/agent-coordination/settings.json` and adapt settings.example.json.
 The workflow configuration schema is unchanged: this optional service is enabled
-only by explicitly launching it. It may be pruned as `agent_coordination` when unused.
+only by explicitly launching it. Configuration recommends pruning it as
+`agent_coordination` unless several agents will run at the same time and need
+messaging or assignments.
 
 The local operator enrolls each allowed identity, role, token environment-variable
 name and explicit task IDs. There is no wildcard task permission and no remote

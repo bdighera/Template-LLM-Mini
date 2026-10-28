@@ -67,11 +67,12 @@ NORTH_STAR.md and approval record. Preserve the approved vision while drafting;
 unchanged assessments still need approval. See docs/workflow.md for recovery and
 adoption. Never treat a pending draft as approved direction.
 
-If agent communication or orchestrator assignments are needed, discuss the optional
-addons/agent_coordination component: JSON API first, MCP adapter, explicit identities
-and task permissions, local approval, authoritative checkout, private retention and
-separately approved dependencies. Default to not installed/not running; no automatic
-model calls, external transmission or agent activation. Prune it when unused.
+Recommend pruning the optional addons/agent_coordination component by default. Keep
+it only when several agents will run at the same time and need messaging or
+orchestrator assignments; then discuss it: JSON API first, MCP adapter, explicit
+identities and task permissions, local approval, authoritative checkout, private
+retention and separately approved dependencies. Default to not installed/not
+running; no automatic model calls, external transmission or agent activation.
 
 If coordination is retained, include its strict CI runner, dependency manifests and
 schema freshness in the validation plan. If pruned, preserve the approved `prune`
