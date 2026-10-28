@@ -1,6 +1,7 @@
 {
   "env": {
-    "WORKFLOW_AGENT": "claude"
+    "WORKFLOW_AGENT": "claude",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet"
   },
   "permissions": {
     "ask": [

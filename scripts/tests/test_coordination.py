@@ -246,6 +246,7 @@ class GuardTests(HarnessTestCase):
     def test_settings_wire_hooks_to_guard(self):
         settings = json.loads((self.root / '.claude/settings.json').read_text())
         self.assertEqual(settings['env']['WORKFLOW_AGENT'], 'claude')
+        self.assertEqual(settings['env']['CLAUDE_CODE_SUBAGENT_MODEL'], 'sonnet')
         commands = [h['command'] for event in settings['hooks'].values() for entry in event for h in entry['hooks']]
         self.assertTrue(all('scripts/workflow.sh' in c and 'guard' in c for c in commands))
 
