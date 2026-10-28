@@ -307,6 +307,7 @@ class PruneTests(HarnessTestCase):
 
     @needs_data_addon
     def test_update_config_previews_removals_before_deleting(self):
+        self.put('CONFIGURE.md', 'interview\n')  # A configured copy may already have pruned it.
         self.configure()
         self.config['prune'] = ['data_analysis', 'configuration_interview']
         self.put('candidate.json', self.config)
