@@ -18,7 +18,7 @@ template remote, and approved fixtures.
 | Topic | Ask | Default |
 |---|---|---|
 | Project | Name, purpose, users, scope, exclusions, observable acceptance criteria? | One focused deliverable |
-| Technology | Languages, frameworks, dependencies, environment? | Python for all deterministic components |
+| Technology | Languages, frameworks, existing dependencies, reuse opportunities, package manager, virtual environment, manifest/lockfile and approved installation scope? | Python for deterministic components; evaluate existing dependencies and suitable maintained libraries before custom code; approve new packages before installation into the project virtual environment; keep the core harness dependency-free |
 | Data | Sources, sensitivity, size, retention, generated outputs, approved Git fixtures? | raw/ read-only, processed/, generated/; contents ignored; `approved_fixtures: []` (configure un-ignores listed fixtures) |
 | Evidence | External data staged under ./data, download approvals, unknown-source handling? | ./data only; explicit download approval; "source unavailable" rather than invention |
 | Data-analysis add-on | Will tasks fetch, consume, or produce datasets that need inspection or an analyzer? | `addons.data_analysis: false`; if true, add the `analysis` section (below) |

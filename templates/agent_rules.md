@@ -29,6 +29,26 @@ native tools). Models handle interpretation, design, code generation, and
 qualitative judgment only. Clarify ambiguous classifications before implementing
 and record the decision.
 
+## Dependencies and reuse
+
+Python scripts may use third-party libraries; the standard-library-only constraint
+applies to the core workflow harness, not applications created from this template.
+Before implementing reusable functionality, inspect existing project dependencies
+and consider suitable maintained libraries. Reuse them when they fit; explain a
+custom implementation when its tradeoffs justify it.
+
+Propose new dependencies with their purpose and relevant tradeoffs before
+installation. Obtain explicit approval for the packages and installation scope
+(approval may be included in the configuration or task plan). Then install only
+the approved dependencies in the project's virtual environment, using the existing
+package manager and dependency manifest/lockfile conventions. Record direct
+dependencies and supported versions, keep lockfiles current where used, and include
+manifests/lockfiles in validation.source_paths. Verify imports and relevant
+regression tests with that environment's interpreter. Package installation is
+environment setup, not an external dataset fetch; data downloads still follow
+the separate evidence rules. Do not add an automatic installer or dependencies to
+the core harness without a separately approved change.
+
 ## Evidence and honesty
 
 External evidence comes only from files staged under `./data`. Downloads need

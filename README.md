@@ -5,8 +5,16 @@ Codex, or both side by side): **define → build → independent QC → test →
 done**, with a shared task board, path-scoped claims, and hooks that enforce the
 rules that should never depend on a model remembering them.
 
-Python v3.9, v3.12, v3.13 is enough. No model server, SDK, database, or third-party packages.
+Python v3.9, v3.12, v3.13 is enough for the harness. It needs no model server,
+SDK, database, or third-party packages. Applications created from this template
+may use third-party Python libraries.
 The assistant supplies model access, delegation, and compaction.
+
+Before writing equivalent functionality, agents evaluate existing dependencies and
+suitable maintained libraries. New packages need approval of their purpose,
+tradeoffs and installation scope; approved packages go in the project's virtual
+environment and dependency manifest/lockfile. See the dependency policy in
+[the shared rules](templates/agent_rules.md) and [workflow reference](docs/workflow.md).
 
 ## Layout
 

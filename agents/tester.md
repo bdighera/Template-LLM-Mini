@@ -16,6 +16,11 @@ Report only executed checks and observed results; list manual checks and
 limitations separately. Structural tests do not prove factual accuracy. After
 validation passes, return final handoff content for the coordinator.
 
+For dependency changes, use the project's virtual-environment interpreter, verify
+required imports and run relevant regression tests. Check declared dependencies
+support the tested environment. New test packages also require explicit installation
+approval and manifest updates; do not install them implicitly.
+
 Check North Star alignment and flag conflicting requests. Significant features
 need an alignment assessment before implementation and a reassessment at completion.
 Pending North Star drafts require explicit user approval and publication by the

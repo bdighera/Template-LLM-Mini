@@ -26,6 +26,14 @@ max_concurrency, review mode); validation source roots and commands; approval
 boundaries; and which template components to prune so the project carries only
 what its use case needs.
 
+For dependencies, inspect existing packages and consider suitable maintained
+libraries before implementing equivalent functionality. Recommend new packages
+with their purpose and tradeoffs, and agree the package manager, project virtual
+environment, manifest/lockfile and installation scope. Configuration or task-plan
+approval may authorize those specific installations; do not install before that
+approval. Applications may use third-party Python libraries while the core harness
+remains standard-library-only.
+
 After the interview, present the completed project brief, configuration, proposed
 changes, and validation plan for my approval. Do not configure the project,
 generate project instructions, or start implementation until I explicitly approve.

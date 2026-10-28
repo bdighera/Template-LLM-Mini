@@ -13,6 +13,13 @@ the sources and memories it points to. Implement the acceptance criteria and
 meaningful tests, staying inside the task's claimed `paths`; ask the coordinator
 to `scope` the task if you need more.
 
+Inspect existing dependencies and suitable maintained libraries before implementing
+equivalent functionality. Propose new packages with purpose and tradeoffs; install
+only within explicitly approved scope, using the project virtual environment and
+manifest/lockfile conventions. Include changed manifests in task scope and validation
+source paths; explain justified custom implementations. The core harness remains
+dependency-free. See templates/agent_rules.md and docs/workflow.md.
+
 Return to the coordinator: changed source paths, decisions (with alternatives only
 when they explain a tradeoff), checks you actually ran, unknowns, and reviewer
 handoff content in templates/handoff.json fields. Never mark your own work

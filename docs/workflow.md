@@ -13,6 +13,28 @@ python3 scripts/workflow.py self-test       # the harness's own tests (after cha
 
 `doctor` exits 2 when it has warnings. The SessionStart hook repeats its warnings.
 
+## Dependencies and reuse
+
+The core harness uses only the Python standard library. Projects created from it
+may use third-party Python libraries. Inspect existing dependencies and evaluate
+suitable maintained libraries before implementing equivalent functionality; explain
+when custom code is the better fit.
+
+Before installing new packages, propose their purpose, tradeoffs and installation
+scope for explicit approval, either during configuration or in the task plan.
+Use the project's virtual environment and existing package manager; record direct
+dependencies and supported versions in its manifest and update lockfiles where
+used. Include these files in task paths and `validation.source_paths` so changes
+invalidate stale review/test evidence. Run import checks and relevant regression
+tests with the environment's interpreter, including `workflow.py test TASK` when
+recording formal results. Do not introduce an automatic installer or third-party
+dependencies into the core harness without separate approval.
+
+Package installs are approved environment setup, not datasets requiring staging
+under `data/raw/`. Downloads of external evidence still follow the data policy.
+Dependency selection, reuse and installation approval are agent policy; the
+workflow has no package resolver or automatic installation mechanism.
+
 ## Agents side by side
 
 Each agent sets an identity: Claude Code gets `WORKFLOW_AGENT=claude` from
