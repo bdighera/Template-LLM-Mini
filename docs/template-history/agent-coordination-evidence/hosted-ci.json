@@ -1,0 +1,47 @@
+{
+  "run_id": 40672429285,
+  "run_url": "https://github.com/bdighera/Template-LLM-Mini/actions/runs/40672429285",
+  "implementation_commit": "cce94fe8f59d4f91e8821f94e59e52aec1453ff2",
+  "jobs": [
+    {
+      "name": "agent-coordination (ubuntu-latest, Python 3.12)",
+      "conclusion": "success"
+    },
+    {
+      "name": "self-test (windows-latest, Python 3.9)",
+      "conclusion": "success"
+    },
+    {
+      "name": "self-test (windows-latest, Python 3.12)",
+      "conclusion": "success"
+    },
+    {
+      "name": "self-test (ubuntu-latest, Python 3.13)",
+      "conclusion": "success"
+    },
+    {
+      "name": "self-test (windows-latest, Python 3.13)",
+      "conclusion": "success"
+    },
+    {
+      "name": "self-test (ubuntu-latest, Python 3.9)",
+      "conclusion": "success"
+    },
+    {
+      "name": "self-test (ubuntu-latest, Python 3.12)",
+      "conclusion": "success"
+    },
+    {
+      "name": "agent-coordination (ubuntu-latest, Python 3.13)",
+      "conclusion": "success"
+    },
+    {
+      "name": "agent-coordination (windows-latest, Python 3.12)",
+      "conclusion": "success"
+    },
+    {
+      "name": "agent-coordination (windows-latest, Python 3.13)",
+      "conclusion": "success"
+    }
+  ]
+}
