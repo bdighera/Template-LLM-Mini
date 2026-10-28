@@ -17,6 +17,12 @@ evidence. Check that feature work had an approved plan and that changed conventi
 are reflected in docs, roles, and tests. Check that significant choices are in the
 journal; a journal status is not proof of approval.
 
+Check that dependency reuse was considered before custom equivalents, new package
+installations had explicit approval, and manifests/lockfiles and validation source
+paths reflect dependency changes. Check the core harness stays dependency-free
+unless a separate change was approved. Dependency judgments follow the shared
+rules and docs/workflow.md.
+
 Return actionable findings or a reasoned pass, with the source paths you examined.
 Start the report with the packet's `review_ref: <value>` line; the coordinator
 cannot record a review without it. Mark findings that can be deferred so they can

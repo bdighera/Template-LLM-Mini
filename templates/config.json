@@ -65,7 +65,7 @@
   },
   "approvals": "",
   "delivery": "",
-  "execution_boundary": "All deterministic components MUST use Python scripts; models handle judgment only. Clarify ambiguous cases with the user before implementation.",
+  "execution_boundary": "All deterministic components MUST use Python scripts; third-party libraries are allowed in applications. Evaluate existing dependencies and suitable maintained libraries before custom equivalents. Install new packages only within explicitly approved scope, using the project virtual environment and dependency manifest/lockfile. The core harness remains standard-library-only. Models handle judgment only. Clarify ambiguous cases with the user before implementation.",
   "boundary_decisions": "No unresolved ambiguity",
   "context": {
     "max_chars": 12000
