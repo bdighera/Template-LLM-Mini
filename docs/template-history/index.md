@@ -13,5 +13,6 @@ These records describe the template before project customization, not live tasks
 - [Journal refinements](memories/009-journal-refinements.md)
 - [Multi-agent hooks and restructuring](memories/010-multi-agent-hooks.md)
 - [Configuration-trial fixes](memories/011-configuration-trial-fixes.md)
+- [Default subagent model](memories/012-default-subagent-model.md)
 
 Prompt 002 (initialization prompt) produced the primer, not a feature memory.

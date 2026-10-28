@@ -112,6 +112,11 @@ subagents in `.claude/agents/` (skipping `runtime: codex`). Codex is assigned a 
 by pointing it at `agents/<role>.md`. The guard enforces `writes` when it knows the
 role: from the Claude hook's `agent_type`, from `--role`, or from `WORKFLOW_ROLE`.
 
+Claude subagents with no model of their own, such as the built-in `general-purpose`,
+`Explore`, and `Plan`, run on Sonnet through `CLAUDE_CODE_SUBAGENT_MODEL` in
+`.claude/settings.json`. Roles keep the model their `model_hint` maps to. To change
+the default, edit or remove that setting.
+
 ## Hooks
 
 | Rule | Where it is enforced |

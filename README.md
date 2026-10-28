@@ -21,7 +21,7 @@ The assistant supplies model access, delegation, and compaction.
 | `scripts/tests/` | The harness's own tests (`workflow.py self-test`) |
 | `docs/workflow.md` | Command reference for configured projects |
 | `tests/` | Project tests (empty in the template) |
-| `.claude/settings.json` | Claude Code hooks and `WORKFLOW_AGENT=claude` |
+| `.claude/settings.json` | Claude Code hooks, `WORKFLOW_AGENT=claude`, and Sonnet as the default subagent model |
 | `githooks/pre-commit` | Tool-agnostic commit checks |
 | `scripts/workflow.sh` | Finds a working Python for the hooks (`WORKFLOW_PYTHON` overrides) |
 | `addons/data_analysis/` | Optional fetcher and analyzer roles, approved-source fetching, inspection, profiling (tests in `tests/`) |
