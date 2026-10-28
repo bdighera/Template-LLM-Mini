@@ -1,0 +1,17 @@
+{
+  "task": "T001",
+  "cycle": 1,
+  "snapshot": "74333cf33ab84bb8e67238f49ae5662ea60ac6875c2168570cdaaddf29cd7194",
+  "agent": "codex",
+  "results": [
+    {
+      "command": [
+        "python3",
+        "scripts/workflow.py",
+        "self-test"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "sources_unchanged": true
+}

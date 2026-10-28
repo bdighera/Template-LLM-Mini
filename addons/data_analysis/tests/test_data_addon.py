@@ -229,7 +229,7 @@ class DataAddonTests(HarnessTestCase):
         self.config['analysis']['datasets'] = [spec]
         self.put('config.json', self.config); self.put('data/raw/input.csv', 'wrong_column\n1\n')
         self.configure()
-        self.run_cli('add', '--title', 'Analyze', '--path', 'example.py', '--criterion', 'Schema valid', '--prompt', 'prompt.md',
+        self.run_cli('add', '--significance', 'routine', '--title', 'Analyze', '--path', 'example.py', '--criterion', 'Schema valid', '--prompt', 'prompt.md',
                      '--data', 'expected', '--dataset', './data/raw/input.csv')
         self.run_cli('start', 'T001', success=False)
         self.assertEqual(self.task()['datasets'], ['data/raw/input.csv'])
@@ -238,7 +238,7 @@ class DataAddonTests(HarnessTestCase):
 
     def test_explicit_dataset_phase_conflict_rejected_at_intake(self):
         self.configure()
-        self.run_cli('add', '--title', 'Analyze', '--path', 'example.py', '--criterion', 'Valid', '--prompt', 'prompt.md',
+        self.run_cli('add', '--significance', 'routine', '--title', 'Analyze', '--path', 'example.py', '--criterion', 'Valid', '--prompt', 'prompt.md',
                      '--data', 'expected', '--dataset', 'data/generated/output.csv',
                      '--analysis-phase', 'pre', success=False)
         self.assertEqual(json.loads((self.root / '.workflow/state.json').read_text())['tasks'], [])
@@ -279,7 +279,7 @@ class DataAddonTests(HarnessTestCase):
         for index, raw in enumerate(('[{"id":1,"id":2}]', '[{"id":NaN}]', '[{"id":Infinity}]', '[{"id":1e999}]'), 1):
             name = f'data/raw/input{index}.json'
             self.put(name, raw)
-            task = self.run_cli('add', '--title', 'Analyze', '--path', 'example.py', '--criterion', 'Valid JSON', '--prompt', 'prompt.md',
+            task = self.run_cli('add', '--significance', 'routine', '--title', 'Analyze', '--path', 'example.py', '--criterion', 'Valid JSON', '--prompt', 'prompt.md',
                                 '--dataset', name).stdout.strip()
             self.run_cli('start', task, success=False)
         tasks = json.loads((self.root / '.workflow/state.json').read_text())['tasks']

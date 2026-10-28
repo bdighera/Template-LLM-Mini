@@ -18,6 +18,7 @@ import coordination as coord
 import decision_journal
 import doctor
 import roles
+import north_star
 
 ROOT = Path(__file__).resolve().parents[1]
 ADDON = ROOT / 'addons/data_analysis'
@@ -312,7 +313,7 @@ def analysis_stale(task, config):
 
 
 def fingerprint(config, task):
-    files = set()
+    files = {'NORTH_STAR.md'} if (ROOT / 'NORTH_STAR.md').is_file() else set()
     for ref in source_roots(config) + task['source_files']:
         path = local(ref)
         require(path.exists(), f'Fingerprint path missing: {ref}')
@@ -632,6 +633,7 @@ def context(task, config, role, limit):
     require(role == 'coordinator' or role in definitions, f'Unknown role {role}; configured: {", ".join(definitions)}')
     packet = task_view(task) | {'role': role, 'omitted': [], 'rules': 'AGENTS.md',
                               'validation_stale': bool(task['snapshot']) and task['status'] != 'done' and not fresh(task, config)}
+    packet['north_star'] = north_star.status(sys.modules[__name__], read(ROOT / '.workflow/state.json'))
     packet['role_policy'] = roles.policy(definitions[role]) if role != 'coordinator' else None
     if role == 'reviewer' and task['snapshot']:
         packet['review_ref'] = review_ref(task)
@@ -695,6 +697,7 @@ def parser():
     c.add_argument('--prompt', help='File with the request'); c.add_argument('--prompt-text', help='The request as text')
     c.add_argument('--follows', help='Task whose review or result this follows up (does not block)')
     c.add_argument('--path', action='append', required=True, help='Glob of files this task may change (repeatable)')
+    c.add_argument('--significance', choices=['significant', 'routine'], default='significant', help='New capabilities/scope/architecture/users/principles are significant; narrow maintenance is routine')
     c.add_argument('--data', choices=['auto', 'expected', 'none'])
     c.add_argument('--data-reason', default='')
     c.add_argument('--dataset', action='append', default=[])
@@ -728,6 +731,8 @@ def parser():
             c.add_argument('--path', action='append', required=True)
         if name == 'fetch':
             c.add_argument('--source', required=True, help='Name of an approved entry in analysis.sources')
+    c = add('north-star'); c.add_argument('action', choices=['status', 'assess', 'draft', 'publish'])
+    c.add_argument('--task'); c.add_argument('--file'); c.add_argument('--approved', action='store_true'); c.add_argument('--preview-hash')
     c = add('decide'); c.add_argument('--file', required=True); c.add_argument('--task'); c.add_argument('--supersedes')
     c = add('journal'); c.add_argument('--task'); c.add_argument('--type', choices=['decision', 'milestone']); c.add_argument('--id'); c.add_argument('--limit', type=int, default=20); c.add_argument('--all', action='store_true'); c.add_argument('--render', action='store_true'); c.add_argument('--full', action='store_true'); c.add_argument('--max-chars', type=int, default=6000)
     add('check')
@@ -1039,12 +1044,15 @@ def dispatch(args):
     config = read(ROOT / '.workflow/config.json'); validate_config(config)
     state = read(ROOT / '.workflow/state.json')
     require(state.get('schema_version') == VERSION, 'Old state schema; explicit migration required (do not overwrite history)')
+    if cmd == 'north-star':
+        return north_star.dispatch(sys.modules[__name__], args, state)
     if cmd == 'sync-agents':
         require(claude_enabled(config), 'claude_integration is pruned; nothing to generate')
         print('\n'.join(roles.sync(ROOT, roles.configured(ROOT, config))) or 'No Claude subagents (all roles are codex-only).'); return
     if cmd == 'recall':
         print(encoded(recall(state, args.query, args.limit))); return
     if cmd == 'status':
+        print(north_star.notify(sys.modules[__name__], state), file=sys.stderr)
         print(encoded([task_view(t) for t in state['tasks'] if args.all or t['status'] != 'done'])); return
     if cmd == 'check':
         decision_journal.load(ROOT)
@@ -1083,7 +1091,7 @@ def dispatch(args):
         t = dict(id=f'T{len(state["tasks"]) + 1:03}', title=args.title, criteria=args.criterion,
                  dependencies=args.depends, status='planned', repairs=0, cycle=0, review_pass=False,
                  test_pass=False, snapshot=None, source_files=[], artifacts={}, paths=paths, claim=None,
-                 built_by=None, data_mode=mode, data_reason=reason, datasets=datasets,
+                 built_by=None, significant=args.significance == 'significant', data_mode=mode, data_reason=reason, datasets=datasets,
                  analysis_phases=phases,
                  analysis_state={}, analysis_pending=None, data_question=None, follows=args.follows,
                  **{k: [] for k in KINDS})
@@ -1115,6 +1123,9 @@ def dispatch(args):
     if cmd in ('review', 'test', 'memory', 'done') or (cmd == 'handoff' and args.to != 'reviewer'):
         if t['snapshot']:
             ensure_fresh(t, config, state)
+    if cmd in ('start', 'claim') and not (cmd == 'claim' and coord.live_claim(t) and t['claim']['agent'] == AGENT):
+        north_star.checkpoint(sys.modules[__name__], state)
+        north_star.require_start(sys.modules[__name__], state, t)
     if cmd == 'claim':
         take_claim(t, state, config, args.ttl)
         print(f'{t["id"]} claimed by {AGENT} until {t["claim"]["expires"]}')
@@ -1257,6 +1268,8 @@ def dispatch(args):
         artifact(t, 'prompts', body(args.file), 'md')
     save(state)
     if cmd == 'done':
+        north_star.checkpoint(sys.modules[__name__], state)
+        print(north_star.notify(sys.modules[__name__], state))
         milestone('Task completed: ' + t['title'], task=t['id'], rationale='Completion checks accepted current review, tests, memory, and final handoff.',
                   outcome='Task marked done.', evidence=[t['reviews'][-1], t['tests'][-1], t['memories'][-1], t['handoffs'][-1]])
         open_follow_ups = [x['id'] for x in state['tasks'] if x.get('follows') == t['id'] and x['status'] != 'done']
