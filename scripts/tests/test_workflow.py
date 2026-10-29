@@ -284,6 +284,100 @@ class WorkflowTests(HarnessTestCase):
         (self.root / 'PROJECT.md').write_text('Changed after preview\n')
         self.run_cli('update-config', '--config', 'config.json', '--approved', '--preview-hash', preview['preview_hash'], success=False)
 
+    def project_rules(self, text):
+        """Return a marked project-rules block holding text."""
+        return ('<!-- project-rules:begin (kept verbatim by update-config) -->\n'
+                f'## Project rules\n\n{text}\n<!-- project-rules:end -->')
+
+    def apply_context_change(self):
+        """Preview and apply a small configuration change; return the preview."""
+        self.config['context']['max_chars'] = 9000
+        self.put('candidate.json', self.config)
+        preview = json.loads(self.run_cli('update-config', '--config', 'candidate.json').stdout)
+        self.run_cli('update-config', '--config', 'candidate.json', '--approved', '--preview-hash', preview['preview_hash'])
+        return preview
+
+    def test_project_rules_block_survives_update_config_verbatim(self):
+        self.configure()
+        blocks = {'AGENTS.md': self.project_rules('Synthetic rule: keep me exactly.  \nSecond line.'),
+                  'PROJECT.md': self.project_rules('**synthetic note**: kept across updates.')}
+        for name, block in blocks.items():
+            path = self.root / name
+            path.write_text(path.read_text().rstrip('\n') + '\n\n' + block + '\n')
+        preview = self.apply_context_change()
+        self.assertEqual(preview['guidance_removals'], {})
+        self.assertNotIn('warning', preview)
+        for name, block in blocks.items():
+            self.assertIn(block, (self.root / name).read_text())
+        # A second regeneration is a no-op for guidance.
+        self.config['context']['max_chars'] = 8000
+        self.put('candidate.json', self.config)
+        again = json.loads(self.run_cli('update-config', '--config', 'candidate.json').stdout)
+        self.assertEqual(again['guidance_changes'], {})
+
+    def test_preview_flags_hand_written_guidance_outside_the_block(self):
+        self.configure()
+        path = self.root / 'AGENTS.md'
+        path.write_text(path.read_text() + '\nUnmarked synthetic rule.\n')
+        self.config['context']['max_chars'] = 9000
+        self.put('candidate.json', self.config)
+        preview = json.loads(self.run_cli('update-config', '--config', 'candidate.json').stdout)
+        self.assertEqual(preview['guidance_removals'], {'AGENTS.md': ['Unmarked synthetic rule.']})
+        self.assertIn('project-rules block', preview['warning'])
+
+    def test_unclosed_project_rules_block_is_refused(self):
+        self.configure()
+        path = self.root / 'AGENTS.md'
+        path.write_text(path.read_text() + '\n<!-- project-rules:begin (kept verbatim by update-config) -->\nOpen.\n')
+        self.put('candidate.json', self.config)
+        result = self.run_cli('update-config', '--config', 'candidate.json', success=False)
+        self.assertIn('no <!-- project-rules:end -->', result.stdout + result.stderr)
+
+    def test_dropped_line_is_flagged_even_if_its_text_appears_elsewhere(self):
+        self.configure()
+        path = self.root / 'AGENTS.md'
+        shared_line = next(line for line in path.read_text().splitlines() if line.startswith('## Context, decisions'))
+        path.write_text(path.read_text() + '\n' + shared_line + '\n')
+        self.put('candidate.json', self.config)
+        preview = json.loads(self.run_cli('update-config', '--config', 'candidate.json').stdout)
+        self.assertEqual(preview['guidance_removals'], {'AGENTS.md': [shared_line]})
+
+    def test_second_block_is_refused_and_quoted_marker_is_ordinary_text(self):
+        self.configure()
+        path = self.root / 'AGENTS.md'
+        original = path.read_text()
+        path.write_text(original + '\n' + self.project_rules('One.') + '\n\n' + self.project_rules('Two.') + '\n')
+        self.put('candidate.json', self.config)
+        result = self.run_cli('update-config', '--config', 'candidate.json', success=False)
+        self.assertIn('Only one', result.stdout + result.stderr)
+        quoted = 'Use <!-- project-rules:begin (kept verbatim by update-config) --> in prose.'
+        path.write_text(original + '\n' + quoted + '\n')
+        preview = json.loads(self.run_cli('update-config', '--config', 'candidate.json').stdout)
+        self.assertEqual(preview['guidance_removals'], {'AGENTS.md': [quoted]})
+
+    def test_block_in_the_middle_of_a_file_moves_to_the_end_unchanged(self):
+        self.configure()
+        path = self.root / 'AGENTS.md'
+        block = self.project_rules('Middle synthetic rule.')
+        lines = path.read_text().splitlines()
+        path.write_text('\n'.join(lines[:3] + [block] + lines[3:]) + '\n')
+        self.apply_context_change()
+        text = path.read_text()
+        self.assertTrue(text.rstrip('\n').endswith(block))
+        self.assertEqual(text.count('Middle synthetic rule.'), 1)
+
+    def test_pruned_component_rules_are_left_out_of_guidance(self):
+        heading = '## Optional agent coordination'
+        self.config['prune'] = sorted(set(self.config.get('prune', [])) | {'agent_coordination'})
+        self.put('config.json', self.config)
+        self.configure()
+        self.assertNotIn(heading, (self.root / 'AGENTS.md').read_text())
+        self.assertIn('## Context, decisions, and documentation', (self.root / 'AGENTS.md').read_text())
+        self.config['prune'].remove('agent_coordination')
+        self.put('candidate.json', self.config)
+        preview = json.loads(self.run_cli('update-config', '--config', 'candidate.json').stdout)
+        self.assertIn('+' + heading, preview['guidance_changes']['AGENTS.md'])
+
     def decision_payload(self, decision='Use Python for deterministic work'):
         payload = json.loads((self.root / 'templates/decision.json').read_text())
         payload.update(decision=decision, rationale='Avoid unnecessary model calls.',
@@ -520,6 +614,34 @@ class WorkflowTests(HarnessTestCase):
         self.run_cli('start', 'T002', '--operation-id', 'blocked-assignment', success=False)
         self.assertNotIn('coordination_start', self.task(1))
         self.assertEqual(self.task(1)['status'], 'planned')
+
+
+class GuidanceSectionTests(HarnessTestCase):
+    """Section stripping for pruned components, tested directly and through configure."""
+
+    def without_section(self, text, heading):
+        """Call workflow.without_section from the source harness."""
+        sys.path.insert(0, str(SOURCE / 'scripts'))
+        try:
+            import workflow
+        finally:
+            sys.path.pop(0)
+        return workflow.without_section(text, heading)
+
+    def test_middle_and_final_sections_are_removed_with_their_subsections(self):
+        text = '## A\nkeep a\n## B\ndrop b\n### B detail\ndrop detail\n## C\nkeep c\n'
+        self.assertEqual(self.without_section(text, '## B'), '## A\nkeep a\n## C\nkeep c\n')
+        self.assertEqual(self.without_section(text, '## C'), '## A\nkeep a\n## B\ndrop b\n### B detail\ndrop detail\n')
+        self.assertEqual(self.without_section(text, '## Missing'), text)
+        self.assertEqual(self.without_section(text, '## B detail'), text)
+
+    def test_renamed_pruned_heading_fails_clearly(self):
+        rules = self.root / 'templates/agent_rules.md'
+        rules.write_text(rules.read_text().replace('## Optional agent coordination', '## Coordination (renamed)'))
+        self.config['prune'] = sorted(set(self.config.get('prune', [])) | {'agent_coordination'})
+        self.put('config.json', self.config)
+        result = self.run_cli('configure', '--config', 'config.json', '--approved', success=False)
+        self.assertIn('PRUNED_RULE_SECTIONS', result.stdout + result.stderr)
 
 
 if __name__ == '__main__':

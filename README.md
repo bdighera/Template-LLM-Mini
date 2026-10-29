@@ -89,7 +89,11 @@ README is preserved. It also maintains the approved-fixture `.gitignore` block.
 Recommend pruning unused data-analysis/coordination components, template history,
 the primer/interview, and Claude integration as appropriate. Configuration applies
 the agreed removals. Subsequent configuration changes use the approved
-`update-config` preview/hash process, preserving task history.
+`update-config` preview/hash process, preserving task history. Put project-specific
+rules in the marked `project-rules` block at the end of `AGENTS.md` and
+`PROJECT.md`; `update-config` keeps that block verbatim and its preview lists any
+other hand-written guidance it would remove (see
+[Configuration updates](docs/workflow.md#configuration-updates)).
 
 ## Work with tasks and agents
 
