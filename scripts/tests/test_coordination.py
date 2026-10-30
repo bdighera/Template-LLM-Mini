@@ -201,6 +201,10 @@ class GuardTests(HarnessTestCase):
         self.assertEqual(self.bash('git -c core.hookspath=/dev/null commit -m x', code=2)['decision'], 'deny')
         self.assertEqual(self.bash('cat tasks.md .workflow/state.json')['decision'], 'allow')
         self.assertEqual(self.bash('python3 scripts/workflow.py status 2>&1')['decision'], 'allow')
+        for command in ('python3 scripts/workflow.py cancel T001 --file r.md --approved',
+                        'sh scripts/workflow.sh reopen T001 --file r.md --approved'):
+            self.assertEqual(self.bash(command, code=2)['decision'], 'ask', command)
+        self.assertEqual(self.bash('python3 scripts/workflow.py show T001')['decision'], 'allow')
 
     def test_windows_spellings_cannot_reach_protected_files(self):
         self.assertEqual(self.edit('TASKS.md', code=2)['decision'], 'deny')

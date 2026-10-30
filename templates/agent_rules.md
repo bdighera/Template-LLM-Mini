@@ -5,7 +5,10 @@
 files (`.workflow/`, `tasks.md`, `handoffs/`, `prompts/logs/`, `memories/`,
 `logging/journal.*`, `.claude/agents/`), changes to `data/raw/` originals, source
 edits without your own live claim, commit-hook bypasses, data/.env/secret commits,
-and journal rewrites. It asks before downloads, new raw files, or secret-like text.
+and journal rewrites. It asks before downloads, new raw files, secret-like text,
+or `cancel`/`reopen`. Only the user cancels or reopens a task: an agent may suggest
+it, but runs it (with `--approved`) only when the user asked. A cancelled task is
+ignored: do not start, claim, re-add, or depend on it unless the user reopens it.
 If a block looks wrong, tell the user; do not work around it. Claude hooks load
 only when the session starts in the project root; otherwise call
 `workflow.py guard edit|bash` before writes and export `WORKFLOW_AGENT`.

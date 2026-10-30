@@ -35,6 +35,7 @@ WRITE_COMMANDS = re.compile(r'\b(rm|mv|cp|tee|truncate|dd|ln|chmod|unlink|shred)
                             r'|Out-File|ri|rni|ni|del|erase|rd|rmdir|ren|move|copy)\b|\[(System\.)?IO\.File\]::)')
 REDIRECT = re.compile(r'>{1,2}\s*([^\s;&|<>]+)')
 DOWNLOAD = re.compile(r'\b(curl|wget|aria2c)\b|(?i:\b(Invoke-WebRequest|iwr|Invoke-RestMethod|irm|Start-BitsTransfer)\b)')
+USER_ONLY = re.compile(r'\bworkflow\.(py|sh)\b[^;&|]*\s(cancel|reopen)\b')
 HOOK_BYPASS = re.compile(r'\bgit\b[^;&|]*\bcommit\b[^;&|]*(--no-verify|\s-[a-zA-Z]*n\b)|(?i:core\.hooksPath)')  # Git config keys are case-insensitive.
 
 
@@ -118,6 +119,8 @@ def bash_decision(command, agent):
     if writes:
         return 'deny', (f'Command would modify {", ".join(sorted(set(writes)))}: workflow files change only through '
                         'scripts/workflow.py and data/raw/ is read-only.')
+    if USER_ONLY.search(command):
+        return 'ask', 'Only the user cancels or reopens a task; proceed only if the user asked for exactly this.'
     if DOWNLOAD.search(command):
         return 'ask', ('Downloads need explicit user approval; prefer a registered source and '
                        '`workflow.py fetch` (data add-on), and stage external evidence under data/ only.')
@@ -173,7 +176,7 @@ def session_text(agent, source=None):
     lines.append(f'Project: {config["project"]["name"]} - {config["project"]["purpose"]}')
     explicit = bool(os.environ.get('WORKFLOW_AGENT')) or agent != 'local'
     lines += [f'Setup warning: {message}' for level, message in doctor.checks(wf.ROOT, config, explicit) if level == 'warn']
-    active = [t for t in state['tasks'] if t['status'] != 'done']
+    active = [t for t in state['tasks'] if t['status'] not in coord.FINISHED]
     lines.append('Board:' if active else 'Board: no active tasks.')
     for t in active:
         claim = coord.live_claim(t)

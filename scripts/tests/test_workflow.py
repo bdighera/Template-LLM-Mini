@@ -37,6 +37,32 @@ class WorkflowTests(HarnessTestCase):
         self.assertEqual(self.task()['status'], 'blocked')
         self.run_cli('unblock', 'T001', success=False)
 
+    def test_cancelled_tasks_are_ignored_until_the_user_reopens_them(self):
+        self.configure(); self.add(); self.add(depends='T001'); self.run_cli('start', 'T001')
+        self.put('reason.md', 'User dropped this feature.\n')
+        self.assertIn('--approved', self.run_cli('cancel', 'T001', '--file', 'reason.md', success=False).stderr)
+        self.assertIn('T002 depend on T001', self.run_cli('cancel', 'T001', '--file', 'reason.md', '--approved', success=False).stderr)
+        self.run_cli('cancel', 'T002', '--file', 'reason.md', '--approved')
+        self.run_cli('cancel', 'T001', '--file', 'reason.md', '--approved', agent='codex')  # Overrides claude's claim.
+        self.assertEqual(self.task()['status'], 'cancelled')
+        self.assertIsNone(self.task()['claim'])
+        self.assertEqual(json.loads(self.run_cli('status').stdout), [])
+        self.assertEqual(len(json.loads(self.run_cli('status', '--all').stdout)), 2)
+        for args in (['start', 'T001'], ['claim', 'T001'], ['unblock', 'T001'], ['block', 'T001', '--file', 'reason.md'],
+                     ['handoff', 'T001', '--to', 'reviewer', '--file', 'handoff.json'], ['scope', 'T001', '--path', 'example.py'],
+                     ['cancel', 'T001', '--file', 'reason.md', '--approved']):
+            self.assertIn('is cancelled', self.run_cli(*args, success=False).stderr, args)
+        self.assertIn('cancelled task', self.run_cli('add', '--title', 'X', '--criterion', 'Works', '--prompt-text', 'x',
+                                                      '--path', 'example.py', '--depends', 'T001', success=False).stderr)
+        self.run_cli('check')
+        self.run_cli('reopen', 'T001', '--file', 'reason.md', success=False)
+        self.run_cli('reopen', 'T003', '--file', 'reason.md', '--approved', success=False)
+        self.run_cli('reopen', 'T001', '--file', 'reason.md', '--approved')
+        self.assertEqual(self.task()['status'], 'planned')
+        self.run_cli('start', 'T001')
+        journal = (self.root / 'logging/journal.jsonl').read_text()
+        self.assertIn('Task cancelled: Example', journal); self.assertIn('Task reopened: Example', journal)
+
     def test_failed_validation_invalidates_review(self):
         self.config['validation']['commands'] = [[sys.executable, '-c', 'raise SystemExit(3)']]
         self.put('config.json', self.config); self.configure(); self.add()
