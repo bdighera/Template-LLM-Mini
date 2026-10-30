@@ -126,6 +126,10 @@ that states them: these rules, README, docs/workflow.md, role definitions, tests
 
 Configuration changes use `update-config` preview, user approval, then
 `--approved --preview-hash`; never hand-edit state or discard task history.
+`update-config` regenerates AGENTS.md and PROJECT.md from these shared rules.
+Put project-specific rules between the `<!-- project-rules:begin ... -->` and
+`<!-- project-rules:end -->` markers at the end of each file; that block is kept
+verbatim, and the preview lists any other hand-written text it would remove.
 
 ## Optional agent coordination
 

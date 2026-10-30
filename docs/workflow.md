@@ -191,7 +191,28 @@ python3 scripts/workflow.py update-config --config candidate.json --approved --p
 
 The preview shows changed fields, guidance diffs, affected tasks, and conflicts.
 The hash binds the candidate, current config/state, and guidance, so a stale preview
-must be redone. Revisions in `.workflow/config-revisions/` keep the old and new
+must be redone.
+
+Applying regenerates AGENTS.md and PROJECT.md from `templates/agent_rules.md`
+(plus enabled add-on rules, minus sections for pruned components such as the
+agent coordination add-on) and the project brief. Hand-written project guidance
+belongs in a marked block at the end of each file:
+
+```text
+<!-- project-rules:begin (kept verbatim by update-config) -->
+## Project rules
+...
+<!-- project-rules:end -->
+```
+
+That block is carried over byte for byte. Each marker must be on a line of its
+own (a marker quoted inside prose is ordinary text), each file may hold only one
+block (a second or unclosed block is refused), and a block found mid-file is
+moved to the end. Any other hand-written line that the regeneration would drop
+is listed in the preview's `guidance_removals`, with a `warning`, so it can be
+moved into the block before approval.
+
+Revisions in `.workflow/config-revisions/` keep the old and new
 configuration and prior state. Applying invalidates active evidence and keeps
 completed history. Config version 2 is not compatible with version 1 projects;
 migrate those by building a fresh candidate from templates/config.json.

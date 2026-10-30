@@ -124,5 +124,7 @@ declare them `phase: post`.
 
 Configuration changes after setup use `update-config`: preview the changes and
 affected tasks, get approval, then apply with the matching `--preview-hash`.
+Applying regenerates AGENTS.md and PROJECT.md; keep project-specific rules in the
+marked `project-rules` block at the end of each file, which is carried over verbatim.
 Changing dataset scope resets active analysis scope; unrelated edits keep it.
 

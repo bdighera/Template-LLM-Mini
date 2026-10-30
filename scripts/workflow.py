@@ -2,6 +2,7 @@
 """Standard-library workflow controller. Every mutation runs under a cross-process
 lock; agents (Claude, Codex, ...) claim tasks with path scopes and leases."""
 import argparse
+import collections
 import difflib
 from datetime import datetime, timezone
 import hashlib
@@ -771,13 +772,90 @@ def config_changes(old, new, path=''):
     return [] if old == new else [{'path': path, 'before': old, 'after': new}]
 
 
-def guidance(config):
-    """Generated project instructions: shared rules plus enabled add-on rules, never config values."""
+# Hand-written project guidance between these markers survives regeneration verbatim.
+PROJECT_RULES_BEGIN = '<!-- project-rules:begin (kept verbatim by update-config) -->'
+PROJECT_RULES_END = '<!-- project-rules:end -->'
+# Shared-rule sections that describe a component; omitted once config.prune removes it.
+PRUNED_RULE_SECTIONS = {'agent_coordination': '## Optional agent coordination'}
+
+
+def without_section(text, heading):
+    """Return text without the section that starts at heading, up to the next '## ' heading."""
+    lines = text.splitlines(True)
+    kept = []
+    skipping = False
+    for line in lines:
+        if line.rstrip('\n') == heading:
+            skipping = True
+            continue
+        if skipping and line.startswith('## '):
+            skipping = False
+        if not skipping:
+            kept.append(line)
+    return ''.join(kept).rstrip('\n') + '\n'
+
+
+def project_rules_block(text):
+    """Return the marked project-rules block (markers included) from text, or '' if absent.
+
+    Markers count only as whole lines, so a marker quoted inside a sentence is
+    ordinary text. At most one block is allowed, and it must be closed.
+    """
+    lines = text.splitlines(True)
+    starts = [index for index, line in enumerate(lines) if line.strip() == PROJECT_RULES_BEGIN]
+    if not starts:
+        return ''
+    require(len(starts) == 1, f'Only one {PROJECT_RULES_BEGIN} block is allowed per file')
+    ends = [index for index, line in enumerate(lines) if line.strip() == PROJECT_RULES_END and index > starts[0]]
+    require(ends, f'Project rules block starts with {PROJECT_RULES_BEGIN} but has no {PROJECT_RULES_END}')
+    return ''.join(lines[starts[0]:ends[0] + 1]).rstrip('\n')
+
+
+def guidance(config, previous=None):
+    """Generated project instructions: shared rules plus enabled add-on rules, never config values.
+
+    Sections for pruned components are left out. When previous (the current
+    file contents by name) holds a marked project-rules block, that block is
+    appended verbatim, so update-config never drops hand-written project rules.
+    """
     rules = (ROOT / 'templates/agent_rules.md').read_text(encoding='utf-8')
+    for component, heading in PRUNED_RULE_SECTIONS.items():
+        if component in config.get('prune', []):
+            require(heading in rules.splitlines(), f'Shared rules no longer contain "{heading}"; '
+                    'update PRUNED_RULE_SECTIONS so the pruned component is not described')
+            rules = without_section(rules, heading)
     if data_enabled(config):
         rules += '\n' + (ADDON / 'rules.md').read_text(encoding='utf-8')
     brief = '# Project brief\n\n' + '\n'.join(f'**{key}**: {value}\n' for key, value in config['project'].items())
-    return {'AGENTS.md': '# Project agent instructions\n\n' + rules, 'PROJECT.md': brief}
+    generated = {'AGENTS.md': '# Project agent instructions\n\n' + rules, 'PROJECT.md': brief}
+    for name, content in generated.items():
+        block = project_rules_block((previous or {}).get(name, ''))
+        if block:
+            generated[name] = content.rstrip('\n') + '\n\n' + block + '\n'
+    return generated
+
+
+def guidance_removals(previous, new):
+    """Return {file: [removed nonblank lines]} for guidance text the update would drop.
+
+    Lines inside the preserved project-rules block are never removed, so any line
+    listed here is hand-written text outside the block that regeneration loses.
+    """
+    removed = {}
+    for name in previous:
+        # Count occurrences, so a dropped line is reported even if its text appears elsewhere too.
+        available = collections.Counter(new[name].splitlines())
+        lines = []
+        for line in previous[name].splitlines():
+            if not line.strip():
+                continue
+            if available[line] > 0:
+                available[line] -= 1
+            else:
+                lines.append(line)
+        if lines:
+            removed[name] = lines
+    return removed
 
 
 TEMPLATE_README = '# template_llm_mini\n'
@@ -852,7 +930,8 @@ def update_config(args):
     require(state.get('schema_version') == VERSION, 'State migration required before updating configuration')
     changes = config_changes(current, candidate)
     previous_guidance = {name: (ROOT / name).read_text(encoding='utf-8') for name in ('AGENTS.md', 'PROJECT.md')}
-    new_guidance = guidance(candidate)
+    new_guidance = guidance(candidate, previous_guidance)
+    removed_guidance = guidance_removals(previous_guidance, new_guidance)
     guidance_changes = {name: ''.join(difflib.unified_diff(previous_guidance[name].splitlines(True),
                         new_guidance[name].splitlines(True), fromfile=name, tofile=name))
                         for name in previous_guidance if previous_guidance[name] != new_guidance[name]}
@@ -870,9 +949,13 @@ def update_config(args):
     data_scope_changed = (current.get('analysis', {}).get('datasets') != candidate.get('analysis', {}).get('datasets'))
     removals = prune_targets(candidate)
     preview = {'preview_hash': preview_hash, 'changes': changes, 'affected_tasks': affected,
-               'guidance_changes': guidance_changes, 'removals': removals,
+               'guidance_changes': guidance_changes, 'guidance_removals': removed_guidance, 'removals': removals,
                'data_scope_changed': data_scope_changed,
                'conflicts': conflicts, 'action': 'Active evidence will be invalidated; completed history is preserved.'}
+    if removed_guidance:
+        preview['warning'] = ('Applying this update removes hand-written guidance listed in guidance_removals. '
+                              'Move text that must survive into the project-rules block '
+                              f'({PROJECT_RULES_BEGIN} ... {PROJECT_RULES_END}) before approving.')
     if not args.approved:
         require(args.preview_hash is None, '--preview-hash is only used with --approved')
         print(encoded(preview))
