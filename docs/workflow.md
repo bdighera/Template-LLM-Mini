@@ -116,6 +116,13 @@ immutable; changes need a follow-up task. A review can pass with deferred findin
 register them with `add ... --follows T001` (linked, not blocking); `done T001`
 lists open follow-ups.
 
+Only the user cancels a task. `cancel T001 --file reason.md --approved` records the
+reason, releases the claim, and marks the task `cancelled`: it leaves `status` and
+the session board (`status --all` still shows it), every command but `log` and
+`reopen` refuses it, and no task can depend on it. It is refused while unfinished
+tasks depend on it. `reopen T001 --file reason.md --approved` returns it to
+`planned` with fresh evidence. The guard asks the user before either command runs.
+
 Review and tests are bound to a fingerprint of `validation.source_paths` plus the
 handoff's files, so later edits invalidate them. Include application source, tests,
 and dependency manifests in `source_paths`. Hashes detect drift, not truth.
@@ -166,6 +173,7 @@ the default, edit or remove that setting.
 | Source edits need your own live claim covering the path | Claude `PreToolUse` (edit tools) |
 | Downloads (`curl`, `wget`, WebFetch, WebSearch) need approval | `PreToolUse` ask + permissions |
 | Secret-like content needs approval or redaction | `PreToolUse` ask; pre-commit block |
+| Only the user cancels or reopens a task | `PreToolUse` ask (Bash); `--approved` |
 | No commit-hook bypass | `PreToolUse` (Bash) |
 | Journal only grows; no data contents or `.env` in Git | `githooks/pre-commit` |
 | Board, claims, and resume packet after compaction | Claude `SessionStart` |

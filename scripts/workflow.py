@@ -307,7 +307,7 @@ def inspect_phase(task, config, phase):
 
 
 def analysis_stale(task, config):
-    if task['status'] == 'done':
+    if task['status'] in coord.FINISHED:
         return False
     return any(entry.get('inspection') and entry.get('data_hash') != inspect_phase(task, config, phase)['hash']
                for phase, entry in task['analysis_state'].items())
@@ -633,7 +633,7 @@ def context(task, config, role, limit):
     definitions = roles.configured(ROOT, config)
     require(role == 'coordinator' or role in definitions, f'Unknown role {role}; configured: {", ".join(definitions)}')
     packet = task_view(task) | {'role': role, 'omitted': [], 'rules': 'AGENTS.md',
-                              'validation_stale': bool(task['snapshot']) and task['status'] != 'done' and not fresh(task, config)}
+                              'validation_stale': bool(task['snapshot']) and task['status'] not in coord.FINISHED and not fresh(task, config)}
     packet['role_policy'] = roles.policy(definitions[role]) if role != 'coordinator' else None
     if role == 'reviewer' and task['snapshot']:
         packet['review_ref'] = review_ref(task)
@@ -701,17 +701,18 @@ def parser():
     c.add_argument('--data-reason', default='')
     c.add_argument('--dataset', action='append', default=[])
     c.add_argument('--analysis-phase', choices=['pre', 'post'], action='append')
-    for name in ('start', 'handoff', 'review', 'test', 'memory', 'done', 'block', 'unblock', 'log', 'checkpoint', 'rebuild', 'show', 'context', 'resume', 'data-check', 'analysis-report', 'data-resolve', 'profile', 'fetch', 'claim', 'release', 'heartbeat', 'scope'):
+    for name in ('start', 'handoff', 'review', 'test', 'memory', 'done', 'block', 'unblock', 'log', 'checkpoint', 'rebuild', 'show', 'context', 'resume', 'data-check', 'analysis-report', 'data-resolve', 'profile', 'fetch', 'claim', 'release', 'heartbeat', 'scope', 'cancel', 'reopen'):
         c = add(name); c.add_argument('task')
-        if name in ('review', 'memory', 'log', 'block', 'checkpoint', 'rebuild', 'analysis-report', 'data-resolve'):
+        if name in ('review', 'memory', 'log', 'block', 'checkpoint', 'rebuild', 'analysis-report', 'data-resolve', 'cancel', 'reopen'):
             c.add_argument('--file', required=True)
         if name in ('data-check', 'analysis-report', 'profile'):
             c.add_argument('--phase', choices=['pre', 'post'], required=True)
         if name == 'analysis-report':
             c.add_argument('--verdict', choices=['pass', 'needs-input'], required=True)
             c.add_argument('--question')
-        if name == 'data-resolve':
+        if name in ('data-resolve', 'cancel', 'reopen'):
             c.add_argument('--approved', action='store_true')
+        if name == 'data-resolve':
             c.add_argument('--data', choices=['auto', 'expected', 'none'])
         if name == 'review':
             c.add_argument('--verdict', choices=['pass', 'fail'], required=True)
@@ -937,11 +938,11 @@ def update_config(args):
                         for name in previous_guidance if previous_guidance[name] != new_guidance[name]}
     preview_hash = digest(json.dumps({'current': current, 'state': state, 'candidate': candidate,
                                      'new_guidance': new_guidance, 'previous_guidance': previous_guidance}, sort_keys=True).encode())
-    affected = [task['id'] for task in state['tasks'] if task['status'] != 'done'] if changes or guidance_changes else []
+    affected = [task['id'] for task in state['tasks'] if task['status'] not in coord.FINISHED] if changes or guidance_changes else []
     enabled = data_enabled(candidate)
     conflicts = []
     for task in state['tasks']:
-        if task['status'] != 'done' and enabled and task['data_mode'] != 'none':
+        if task['status'] not in coord.FINISHED and enabled and task['data_mode'] != 'none':
             try:
                 da().validate_selection(ROOT, candidate['analysis'], task['datasets'], task['analysis_phases'])
             except ValueError as exc:
@@ -974,7 +975,7 @@ def update_config(args):
                     'previous_guidance': previous_guidance, 'new_guidance': new_guidance})
     for task in state['tasks']:
         task.setdefault('profiles', [])
-        if task['status'] == 'done':
+        if task['status'] in coord.FINISHED:
             continue
         planned = task['status'] == 'planned'
         paused = task['status'] in ('analyzing', 'awaiting-data')
@@ -1131,7 +1132,7 @@ def dispatch(args):
     if cmd == 'recall':
         print(encoded(recall(state, args.query, args.limit))); return
     if cmd == 'status':
-        print(encoded([task_view(t) for t in state['tasks'] if args.all or t['status'] != 'done'])); return
+        print(encoded([task_view(t) for t in state['tasks'] if args.all or t['status'] not in coord.FINISHED])); return
     if cmd == 'check':
         decision_journal.load(ROOT)
         claimed = [t for t in state['tasks'] if coord.live_claim(t)]
@@ -1149,6 +1150,8 @@ def dispatch(args):
         decision_journal.load(ROOT)
         require(text(args.title) and strings(args.criterion), 'Title/criteria must not be empty')
         require(set(args.depends) <= {t['id'] for t in state['tasks']}, 'Unknown dependency')
+        require(not set(args.depends) & {t['id'] for t in state['tasks'] if t['status'] == 'cancelled'},
+                'Cannot depend on a cancelled task; ask the user to reopen it')
         require(bool(args.prompt) != bool(args.prompt_text), 'Give the request with exactly one of --prompt or --prompt-text')
         require(args.follows is None or any(t['id'] == args.follows for t in state['tasks']), 'Unknown --follows task')
         request = body(args.prompt) if args.prompt else args.prompt_text.strip() + '\n'
@@ -1192,9 +1195,10 @@ def dispatch(args):
         require(2000 <= limit <= 100000, 'Context limit must be 2000..100000 characters')
         print(context(t, config, args.role, limit)); return
     require(t['status'] != 'done' or cmd == 'log', 'Completed tasks are immutable; create a follow-up')
+    require(t['status'] != 'cancelled' or cmd in ('log', 'reopen'), f'{t["id"]} is cancelled; ignore it unless the user asks to reopen it')
     if cmd in ('data-check', 'analysis-report', 'data-resolve', 'profile', 'fetch'):
         require(data_enabled(config), 'Data commands need addons.data_analysis enabled')
-    if cmd != 'claim':
+    if cmd not in ('claim', 'cancel'):  # A user-approved cancel overrides any claim.
         require_access(t, cmd)
     validate_task(t, config)
     decision_journal.load(ROOT)
@@ -1345,13 +1349,31 @@ def dispatch(args):
         require(t['status'] == 'blocked', 'Task is not blocked')
         require(t['repairs'] <= config['handoffs']['max_repairs'], 'Repair allowance exceeded; obtain direction and create a follow-up task')
         t['status'] = t.pop('previous_status', 'building')
+    elif cmd == 'cancel':
+        require(args.approved, 'Only the user cancels a task; pass --approved once they have asked for it')
+        dependents = [x['id'] for x in state['tasks'] if t['id'] in x['dependencies'] and x['status'] not in coord.FINISHED]
+        require(not dependents, f'{", ".join(dependents)} depend on {t["id"]}; change or cancel them first')
+        artifact(t, 'prompts', body(args.file), 'md')
+        t['status'] = 'cancelled'
+        t['claim'] = None
+    elif cmd == 'reopen':
+        require(t['status'] == 'cancelled', 'Only cancelled tasks can be reopened')
+        require(args.approved, 'Only the user reopens a task; pass --approved once they have asked for it')
+        artifact(t, 'prompts', body(args.file), 'md')
+        invalidate(t, config)
+        t.update(status='planned', analysis_pending=None, data_question=None)
     elif cmd == 'log':
         artifact(t, 'prompts', body(args.file), 'md')
     save(state)
+    if cmd in ('cancel', 'reopen'):
+        milestone(('Task cancelled: ' if cmd == 'cancel' else 'Task reopened: ') + t['title'], task=t['id'],
+                  rationale='The user asked for this; their reason is in the task prompts.',
+                  outcome='Task cancelled; agents ignore it.' if cmd == 'cancel' else 'Task returned to planned.',
+                  evidence=[t['prompts'][-1]])
     if cmd == 'done':
         milestone('Task completed: ' + t['title'], task=t['id'], rationale='Completion checks accepted current review, tests, memory, and final handoff.',
                   outcome='Task marked done.', evidence=[t['reviews'][-1], t['tests'][-1], t['memories'][-1], t['handoffs'][-1]])
-        open_follow_ups = [x['id'] for x in state['tasks'] if x.get('follows') == t['id'] and x['status'] != 'done']
+        open_follow_ups = [x['id'] for x in state['tasks'] if x.get('follows') == t['id'] and x['status'] not in coord.FINISHED]
         if open_follow_ups:
             print(f'{t["id"]} done; open follow-ups: {", ".join(open_follow_ups)}')
     if cmd == 'test' and not t['test_pass']:

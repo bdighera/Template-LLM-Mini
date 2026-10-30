@@ -13,6 +13,8 @@ except ImportError:  # Windows
     import msvcrt
 
 AGENT_PATTERN = re.compile(r'[a-z][a-z0-9_-]{0,31}')
+# Terminal statuses: no claims, no further work. Only the user reopens a cancelled task.
+FINISHED = ('done', 'cancelled')
 
 
 def require(ok, message):
@@ -134,7 +136,7 @@ def now():
 
 def live_claim(task, at=None):
     claim = task.get('claim')
-    if not claim or task['status'] == 'done':
+    if not claim or task['status'] in FINISHED:
         return None
     return claim if datetime.fromisoformat(claim['expires']) > (at or now()) else None
 
