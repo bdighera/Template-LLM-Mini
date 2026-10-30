@@ -47,33 +47,3 @@ changes, and validation plan for my approval. Do not configure the project,
 generate project instructions, or start implementation until I explicitly approve.
 The shared rules in templates/agent_rules.md then govern all later work.
 
-## North Star alignment
-
-New tasks default to significant: new capabilities or changes to scope,
-architecture, users or guiding principles. Mark only narrow fixes, maintenance
-and documentation corrections `--significance routine`. Before starting a
-significant feature, record an alignment assessment with `workflow.py north-star
-assess --task TASK --file REPORT`, against approved NORTH_STAR.md or PROJECT.md.
-Flag conflicting requests before proceeding; explicit user decisions may revise
-the vision with approval and a recorded rationale.
-
-After each ten completed tasks and each significant feature completion, synthesize
-the repository into core vision, guiding principles, worthwhile capabilities,
-exclusions and drift assessment with repository evidence. Python opens a pending
-draft; agents supply judgment. Pending reviews block new starts and new claims;
-existing owners may finish. Present the exact draft for explicit approval before
-`north-star publish --approved --preview-hash HASH`, which commits the authoritative
-NORTH_STAR.md and approval record. Preserve the approved vision while drafting;
-unchanged assessments still need approval. See docs/workflow.md for recovery and
-adoption. Never treat a pending draft as approved direction.
-
-Recommend pruning the optional addons/agent_coordination component by default. Keep
-it only when several agents will run at the same time and need messaging or
-orchestrator assignments; then discuss it: JSON API first, MCP adapter, explicit
-identities and task permissions, local approval, authoritative checkout, private
-retention and separately approved dependencies. Default to not installed/not
-running; no automatic model calls, external transmission or agent activation.
-
-If coordination is retained, include its strict CI runner, dependency manifests and
-schema freshness in the validation plan. If pruned, preserve the approved `prune`
-record so CI can distinguish deliberate removal from an incomplete checkout.

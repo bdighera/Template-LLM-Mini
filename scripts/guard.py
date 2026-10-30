@@ -16,7 +16,7 @@ import roles
 import workflow as wf
 
 # Written only by workflow.py (or sync-agents); hand edits break evidence hashes.
-PROTECTED = ('NORTH_STAR.md', '.workflow', 'handoffs', 'prompts/logs', 'memories/features', 'memories/index.md', 'tasks.md',
+PROTECTED = ('.workflow', 'handoffs', 'prompts/logs', 'memories/features', 'memories/index.md', 'tasks.md',
              'logging/journal.jsonl', 'logging/journal.md', '.claude/agents')
 RAW = 'data/raw'
 ALLOW_SECRET = 'guard: allow-secret'
@@ -173,7 +173,6 @@ def session_text(agent, source=None):
     lines.append(f'Project: {config["project"]["name"]} - {config["project"]["purpose"]}')
     explicit = bool(os.environ.get('WORKFLOW_AGENT')) or agent != 'local'
     lines += [f'Setup warning: {message}' for level, message in doctor.checks(wf.ROOT, config, explicit) if level == 'warn']
-    lines.append(wf.north_star.notify(wf, state))
     active = [t for t in state['tasks'] if t['status'] != 'done']
     lines.append('Board:' if active else 'Board: no active tasks.')
     for t in active:

@@ -187,20 +187,6 @@ class CoordinationTests(HarnessTestCase):
         self.call('accept', agent='worker', request_id='restart-accept', assignment_id=identifier)
         self.assertEqual(self.call('inspect', assignment_id=identifier)['result']['status'], 'accepted')
 
-    def test_workflow_north_star_and_significance_gates_preserved(self):
-        identifier = self.assign()
-        self.put('NORTH_STAR.md', 'Synthetic unapproved vision')
-        with self.assertRaises(Fault):
-            self.call('accept', agent='worker', assignment_id=identifier)
-        self.assertEqual(self.task()['status'], 'planned')
-        (self.root / 'NORTH_STAR.md').unlink()
-        state = self.state(); state['tasks'][0]['significant'] = True
-        self.put('.workflow/state.json', state)
-        identifier = self.assign()
-        with self.assertRaises(Fault):
-            self.call('accept', agent='worker', assignment_id=identifier)
-        self.assertEqual(self.task()['status'], 'planned')
-
     def test_expired_approval_and_worktree_scope_rejected(self):
         grant = self.service.approval(self.assignment)
         with self.service.connect() as db:
