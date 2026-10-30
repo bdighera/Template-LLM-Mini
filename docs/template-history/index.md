@@ -17,9 +17,6 @@ These records describe the template before project customization, not live tasks
 
 Prompt 002 (initialization prompt) produced the primer, not a feature memory.
 
-- [North Star checkpoints](memories/013-north-star-checkpoints.md)
-- [North Star independent review](memories/013-north-star-independent-review.md)
-
 - [Dependency reuse and installation policy](memories/014-dependency-reuse-policy.md)
 
 - [Parallel editing agent isolation](memories/015-parallel-agent-isolation.md)

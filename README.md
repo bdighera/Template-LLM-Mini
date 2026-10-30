@@ -22,7 +22,6 @@ dependencies. Applications created from the template may use third-party librari
 | Context and continuity | Focused role context packets, keyword-ranked feature-memory recall, checkpoint/resume records, stale-checkpoint warnings and configured context limits. |
 | Decision history | An append-only JSONL journal with a generated Markdown view, compact queries, linked evidence, superseding decisions and automatic workflow milestones. |
 | Guards and setup checks | Claude hooks, a Git pre-commit hook, and a shared guard CLI for protected workflow files, raw data, source claims, download approval, secret-like content and commit checks. |
-| North Star alignment | Pre-implementation alignment assessments for significant features; vision review after each significant feature completion and every ten completed tasks; draft/approval/publication tracking. |
 | Optional data analysis | Approved-source fetch/parse scripts, dataset inspection, column rules, pre/post analysis gates, provenance/version tracking, user clarification and approved aggregate profiling. |
 | Optional JSON/MCP service | Authenticated local messaging, acknowledgements, scoped orchestrator assignments, explicit local approval grants, durable results and retry recovery through the canonical workflow. |
 | Validation and CI | Configured project checks plus harness regressions. Linux/Windows CI, stacked-PR triggers, strict optional-suite execution, schema freshness, recorded-pruning detection and job timeouts. |
@@ -156,31 +155,6 @@ default, and the Markdown view is regenerated. If an append succeeds but renderi
 fails, repair the view without appending the decision again. See
 [the journal guide](logging/README.md).
 
-## North Star reviews
-
-New tasks default to significant; narrow fixes, maintenance and documentation
-corrections can use `--significance routine`. Before starting significant work,
-record an alignment assessment with `north-star assess` against the approved
-`NORTH_STAR.md`, or `PROJECT.md` before the first publication.
-
-A review becomes due at 10, 20, 30… completed tasks and after each significant
-feature completion, so the first review may occur before task ten. An overdue
-configured project gets one current-state review; coincident triggers share it.
-Detection of an unapproved or changed root `NORTH_STAR.md` also requests review.
-
-A pending review blocks new starts and new claims; existing owners may renew
-leases and finish. The completion/start hooks prepare an unapproved draft and the
-workflow surfaces review status in context/session output. An agent synthesizes
-core vision, guiding principles, worthwhile capabilities, exclusions and drift
-assessment with repository evidence; Python does not generate that judgment.
-
-Publication requires explicit approval of the current preview, then a dedicated
-commit of `NORTH_STAR.md` and its approval/recovery records. Existing approved
-content stays in place during drafting. Unchanged assessments still need approval;
-stale approvals and interrupted commits have recovery checks. Contributors flag
-conflicts with the approved vision before proceeding. See
-[the North Star workflow](docs/workflow.md#north-star-checkpoints).
-
 ## Optional components
 
 **Data analysis** is enabled by approved configuration with
@@ -247,7 +221,7 @@ human/agent responsibilities. The harness provides no OS containment guarantee.
 | `AGENTS.md`, `CLAUDE.md`, `templates/agent_rules.md` | Template entry points and shared rules; configuration creates project instructions |
 | `CONFIGURE.md`, `templates/config.json`, `prompts/template_prompt_initialization.md` | Interview, candidate configuration and initialization primer |
 | `scripts/workflow.py`, `scripts/coordination.py` | Task lifecycle, claims, local state locking, handoffs and evidence |
-| `scripts/north_star.py`, `scripts/decision_journal.py` | Vision checkpoints/publication and append-only decision history |
+| `scripts/decision_journal.py` | Append-only decision history |
 | `scripts/guard.py`, `scripts/doctor.py`, `scripts/workflow.sh`, `githooks/` | Shared guards, setup diagnostics and hook launcher |
 | `agents/`, `scripts/roles.py`, `.claude/` | Role policies and Claude integration/generation |
 | `scripts/ci.py`, `scripts/tests/`, `.github/workflows/ci.yml` | Strict CI tooling, harness regressions and platform matrices |

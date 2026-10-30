@@ -125,8 +125,7 @@ Peer content and claimed outcomes are untrusted findings, not approval or proof.
 ## Scoped assignments and user approval
 
 First register the task in the authoritative workflow with its approved scope and
-criteria. Significant features still need their normal alignment assessment.
-Prepare a separate worktree and dedicated branch for the editing worker, then an
+criteria. Prepare a separate worktree and dedicated branch for the editing worker, then an
 assignment file such as:
 
 ```json
@@ -161,7 +160,7 @@ worker HEAD and worker sources. Changed inputs require explicit reapproval.
 An enrolled orchestrator submits `assign` with that approval ID and exact assignment.
 The assigned worker then calls `accept` with the returned `assignment_id`. Acceptance
 runs only `workflow.py start`, under the canonical workflow lock and worker identity;
-dependency, claim, significance, data-analysis and North Star gates remain effective.
+dependency, claim and data-analysis gates remain effective.
 The first committed start stores `coordination_start` in workflow state. If the
 service stops before recording its response, retrying recovers that receipt instead
 of starting again. SQLite serializes concurrent writes, and committed messages,

@@ -232,55 +232,6 @@ when kept); run them with `workflow.py self-test` when harness files change. The
 use isolated temporary copies, make no provider calls, and skip add-on cases once
 the add-on is pruned.
 
-## North Star checkpoints
-
-The Python task-completion hook requests a review at 10, 20, 30… completed tasks,
-and on completion of every significant feature. An overdue adopted repository
-gets one current-state review; coincident triggers share an assessment. Pending
-reviews block `start` and new `claim` operations. Existing owners may renew leases
-and finish their work. `status`, task context and session hooks surface the gate.
-The first checkpoint creates `.workflow/NORTH_STAR.draft.md`, explicitly unapproved.
-Python never generates the qualitative synthesis or launches a model.
-
-Task registration defaults to `--significance significant`. New capabilities or
-changes to scope, architecture, users or principles are significant. Use
-`--significance routine` for narrow fixes, maintenance and documentation corrections.
-Before implementing a significant task, assess alignment with the authoritative
-North Star (or PROJECT.md before the first publication):
-
-```sh
-python3 scripts/workflow.py north-star assess --task T001 --file alignment.md
-python3 scripts/workflow.py north-star status
-python3 scripts/workflow.py north-star draft --file proposed-vision.md
-python3 scripts/workflow.py north-star publish --approved --preview-hash <hash>
-```
-
-The agent summarizes current repository evidence, approved scope, implementation,
-completed work and decisions into `## Core vision`, `## Guiding principles`,
-`## Worth building`, `## Exclusions`, `## Drift assessment` and
-`## Repository evidence` sections. Cite repository paths; distinguish observed
-behavior, aspirations, inference and unknowns. Assess what is valuable, rather
-than treating every existing capability as a reason to keep building it.
-A draft may be unchanged in substance: explain why alignment still holds.
-
-Present the exact draft and assessment to the user. Only explicit approval of
-that preview authorizes `publish`. Its hash binds the draft, configured source
-selection, configuration and current task state; changing those requires a fresh
-preview and approval. Approval covers `validation.source_paths` plus Git-tracked and unignored source files,
-including repository documentation; data and workflow artifacts are excluded.
-Publication commits only root `NORTH_STAR.md` and its `.workflow/north-star-approval.json` and `.workflow/north-star.json` records,
-runs normal Git hooks, and excludes unrelated staged changes. Commit failure
-keeps the gate pending; retry with the same approval only if its inputs remain
-current. Never bypass a failing hook. Committed `.workflow/north-star.json` tracks
-recoverable publication state; keep it with the workflow artifacts in Git.
-
-The committed North Star becomes authoritative for planning. Flag conflicting
-requests before proceeding. Explicit user decisions may revise it through the same
-approval process, with rationale recorded in the decision journal. Significant
-feature completion always triggers reassessment; the ten-task cadence remains a
-separate backstop. An unapproved, modified or first-discovered NORTH_STAR.md also
-requires review; an existing approved version remains in place while drafting.
-
 ## Optional JSON API and MCP coordination
 
 addons/agent_coordination/README.md documents the explicitly launched local service.

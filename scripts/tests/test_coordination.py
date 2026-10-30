@@ -32,7 +32,7 @@ class ScopeMatchingTests(unittest.TestCase):
 
 class CoordinationTests(HarnessTestCase):
     def add_task(self, title, *paths, agent='claude'):
-        args = ['add', '--significance', 'routine', '--title', title, '--criterion', 'Works', '--prompt', 'prompt.md']
+        args = ['add', '--title', title, '--criterion', 'Works', '--prompt', 'prompt.md']
         for path in paths:
             args += ['--path', path]
         return self.run_cli(*args, agent=agent).stdout.strip()
@@ -117,7 +117,7 @@ class CoordinationTests(HarnessTestCase):
 
     def test_data_commands_need_the_addon(self):
         self.configure()
-        self.run_cli('add', '--significance', 'routine', '--title', 'X', '--criterion', 'Y', '--prompt', 'prompt.md', '--path', 'x.py',
+        self.run_cli('add', '--title', 'X', '--criterion', 'Y', '--prompt', 'prompt.md', '--path', 'x.py',
                      '--data', 'expected', success=False)
         self.add(); self.run_cli('start', 'T001')
         self.run_cli('data-check', 'T001', '--phase', 'pre', success=False)
@@ -132,7 +132,7 @@ class RoleTests(HarnessTestCase):
         self.put('agents/documenter.md', '---\nname: documenter\ndescription: Writes docs.\nruntime: codex\n'
                  'model_hint: fast\nwrites: [docs/**]\ntools: [read, edit]\nindependent_of: none\nrequires: none\n---\nWrite docs.\n')
         self.configure()
-        packet = json.loads(self.run_cli('add', '--significance', 'routine', '--title', 'D', '--criterion', 'C', '--prompt', 'prompt.md', '--path', 'docs/**').stdout and
+        packet = json.loads(self.run_cli('add', '--title', 'D', '--criterion', 'C', '--prompt', 'prompt.md', '--path', 'docs/**').stdout and
                             self.run_cli('context', 'T001', '--role', 'documenter').stdout)
         self.assertEqual(packet['role_policy']['writes'], ['docs/**'])
         self.assertEqual(packet['role_instruction_ref'], 'agents/documenter.md')

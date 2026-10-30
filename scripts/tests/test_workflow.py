@@ -411,7 +411,7 @@ class WorkflowTests(HarnessTestCase):
 
     def test_unset_identity_warns_on_mutations(self):
         self.configure()
-        result = self.run_cli('add', '--significance', 'routine', '--title', 'X', '--criterion', 'Works', '--prompt', 'prompt.md',
+        result = self.run_cli('add', '--title', 'X', '--criterion', 'Works', '--prompt', 'prompt.md',
                               '--path', 'example.py', agent=None)
         self.assertIn('WORKFLOW_AGENT is unset', result.stderr)
         self.assertNotIn('WORKFLOW_AGENT is unset', self.run_cli('status', agent=None).stderr)
@@ -448,7 +448,7 @@ class WorkflowTests(HarnessTestCase):
 
     def test_inline_request_text_and_follow_ups(self):
         self.configure()
-        base = ['add', '--significance', 'routine', '--title', 'X', '--criterion', 'Works', '--path', 'example.py']
+        base = ['add', '--title', 'X', '--criterion', 'Works', '--path', 'example.py']
         self.run_cli(*base, success=False)
         self.run_cli(*base, '--prompt', 'prompt.md', '--prompt-text', 'Both', success=False)
         self.run_cli(*base, '--prompt-text', 'Build the example.')
