@@ -25,6 +25,23 @@ questions open must end with an "Assumed unless you object" list; a bare approva
 accepts exactly those defaults and nothing else. No exception removes task
 tracking, QC, tests, or feature memory.
 
+## North Star alignment
+
+Read NORTH_STAR.md when planning or reviewing feature work. Each feature proposal
+must cite a relevant section or principle and briefly explain alignment. Flag
+conflicts with the approved vision or PROJECT.md for an explicit user decision
+before implementation; approval of a task does not silently revise project direction.
+Reviewers check the assessment against the diff. Record approved direction changes
+and rationale in the decision journal and update NORTH_STAR.md with explicit approval.
+Narrow maintenance needs no separate assessment unless it changes direction.
+
+In a new project copy, propose a project-specific NORTH_STAR.md with the brief and
+configuration for approval, then replace the inherited template vision with that
+approved text. Existing configured projects with a missing or empty North Star
+must propose one for approval before using it as agreed direction; do not invent
+approval or silently use the template's vision as the application's vision.
+Alignment is agent/reviewer policy, with no scheduled reviews or checkpoint gates.
+
 ## Python and models
 
 All deterministic project components MUST be Python scripts (which may invoke

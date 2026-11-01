@@ -28,3 +28,5 @@ Prompt 002 (initialization prompt) produced the primer, not a feature memory.
 - [Current-feature README and accuracy QC](memories/018-current-feature-readme.md)
 
 - [Uppercase task board](memories/019-uppercase-task-board.md)
+
+- [Lightweight North Star planning and review](memories/020-lightweight-north-star.md)

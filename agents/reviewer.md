@@ -12,6 +12,11 @@ Read the reviewer context packet, criteria, diff, and relevant sources. Assess
 correctness, coverage, scope (changes stay inside the task's paths), and
 maintainability. Request missing context instead of guessing.
 
+For feature work, read NORTH_STAR.md and check that the approved proposal cites a
+relevant principle or section and explains alignment. Compare that assessment with
+the diff; report unresolved conflicts with the vision or PROJECT.md. An empty or
+inherited template vision is not evidence of an approved application direction.
+
 Read-only reviewers may share a checkout; never switch branches in another active
 agent's working directory. Check that parallel editing agents used separate Git
 worktrees and dedicated branches, honored task/path assignments, and returned

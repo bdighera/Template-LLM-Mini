@@ -42,7 +42,14 @@ approval may authorize those specific installations; do not install before that
 approval. Applications may use third-party Python libraries while the core harness
 remains standard-library-only.
 
-After the interview, present the completed project brief, configuration, proposed
+After the interview, propose a project-specific NORTH_STAR.md covering core vision,
+principles, worthwhile capabilities and exclusions. Include it in validation source
+paths and replace the inherited template vision only with the approved text.
+Feature proposals must cite alignment; reviewers check it and flag conflicts for
+an explicit user decision. This is agent policy, without scheduled checkpoint gates.
+
+After the interview, present the completed project brief, North Star, configuration,
+proposed
 changes, and validation plan for my approval. Do not configure the project,
 generate project instructions, or start implementation until I explicitly approve.
 The shared rules in templates/agent_rules.md then govern all later work.

@@ -12,6 +12,10 @@ Read the tester context packet, criteria, and review evidence. Propose or write
 checks inside the task's paths; the coordinator runs configured checks with
 `workflow.py test` and records the real results.
 
+For feature work, read NORTH_STAR.md and use the approved alignment assessment to
+identify relevant validation. Report what executed checks establish and leave
+semantic alignment to review; passing tests alone do not establish alignment.
+
 If you edit files while other agents work in parallel, use your own Git worktree
 and dedicated branch. Never switch branches in another active agent's working
 directory. Read-only review may share a checkout; validation that writes repository

@@ -1,0 +1,30 @@
+{
+  "task": "T001",
+  "cycle": 0,
+  "snapshot": "cfbb289faedb8cd94791a01f44eb616f96c76cc0a22548ff4238907393f03134",
+  "agent": "codex",
+  "target": "tester",
+  "acceptance_criteria": [
+    "Concrete template vision; feature proposals cite alignment; conflicts require user decision; setup proposes project-specific vision; no checkpoint gates"
+  ],
+  "analysis_evidence": {},
+  "objective": "Implement approved lightweight North Star planning and review policy",
+  "files": [
+    "AGENTS.md",
+    "CONFIGURE.md",
+    "NORTH_STAR.md",
+    "README.md",
+    "agents/builder.md",
+    "agents/reviewer.md",
+    "agents/tester.md",
+    "docs/workflow.md",
+    "prompts/template_prompt_initialization.md",
+    "templates/agent_rules.md"
+  ],
+  "memories": [],
+  "decisions": "User approved policy-only alignment with no gates, dependencies or fields; configure maintains no North Star text.",
+  "changes": "Populate template vision and align shared rules, roles, setup and workflow documentation.",
+  "validation": "Self-test running; final validation follows independent review.",
+  "unresolved": "No known issues. Tracker is isolated; template remains unconfigured.",
+  "next_action": "Independent review of diff and setup behavior"
+}
