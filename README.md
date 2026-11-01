@@ -21,6 +21,7 @@ dependencies. Applications created from the template may use third-party librari
 | Roles and integrations | Required builder/reviewer/tester definitions, custom roles, runtime/tool/write policies, and generated Claude subagents. Optional fetcher/analyzer roles load with the data-analysis add-on. |
 | Context and continuity | Focused role context packets, keyword-ranked feature-memory recall, checkpoint/resume records, stale-checkpoint warnings and configured context limits. |
 | Decision history | An append-only JSONL journal with a generated Markdown view, compact queries, linked evidence, superseding decisions and automatic workflow milestones. |
+| North Star direction | Feature proposals cite a principle in `NORTH_STAR.md` and explain alignment; reviewers check conflicts. Agent policy, without scheduled checkpoint gates. |
 | Guards and setup checks | Claude hooks, a Git pre-commit hook, and a shared guard CLI for protected workflow files, raw data, source claims, download approval, secret-like content and commit checks. |
 | Optional data analysis | Approved-source fetch/parse scripts, dataset inspection, column rules, pre/post analysis gates, provenance/version tracking, user clarification and approved aggregate profiling. |
 | Optional JSON/MCP service | Authenticated local messaging, acknowledgements, scoped orchestrator assignments, explicit local approval grants, durable results and retry recovery through the canonical workflow. |
@@ -68,7 +69,14 @@ is a prompt template; displaying it does not execute it.
 The interview covers purpose/scope, technology, data/evidence, add-ons, roles,
 parallel agents, review policy, tasks/handoffs, prompts/memory, decisions, context,
 validation, approvals, delivery and cleanup. The assistant presents the completed
-brief, configuration, changes and validation plan for explicit approval.
+brief, project-specific North Star, configuration, changes and validation plan
+for explicit approval.
+The assistant writes the approved North Star in the project copy; configuration
+commands do not generate or maintain it. Include it in validation source paths.
+
+Feature planning follows [the North Star](NORTH_STAR.md) and the alignment policy
+in [the shared rules](templates/agent_rules.md). Approved direction changes are
+recorded in the decision journal; unresolved conflicts need a user decision.
 
 Once those answers are recorded in a candidate configuration:
 

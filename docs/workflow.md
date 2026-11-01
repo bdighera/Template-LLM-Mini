@@ -302,3 +302,27 @@ component files, or a partially removed component, fails instead of silently
 skipping checks. Use the configuration/update-config approval process for pruning;
 never hand-edit workflow state to make CI green. No new packages or service
 startup are needed to determine component presence.
+
+## North Star planning and review
+
+Read NORTH_STAR.md when planning or reviewing features. Include a brief alignment
+assessment in the proposal: cite the relevant section or principle, explain the
+connection, and flag conflicts with the vision or PROJECT.md for a user decision
+before implementation. For example: "Small adaptable core: this integration is
+optional and leaves the standard-library core unchanged."
+
+Reviewers compare that assessment with the diff and report unresolved conflicts.
+Narrow maintenance needs no separate assessment unless it changes direction.
+Approval of a feature does not silently approve revising the vision. Record explicit
+approval and rationale for direction changes through `workflow.py decide`, then
+update NORTH_STAR.md within the claimed task scope.
+
+During configuration, propose project-specific vision, principles, worthwhile
+capabilities and exclusions with the brief for approval. After approval, replace
+the inherited template vision with the approved text. Add NORTH_STAR.md to
+validation.source_paths so its edits invalidate stale evidence. These are assistant
+steps: `configure` and `update-config` do not write the vision. Existing projects
+with a missing or empty file need an approved vision before treating it as direction.
+Role instructions reference the file; context packets do not embed its contents,
+so workers must read it explicitly. There are no automatic alignment judgments,
+scheduled reviews, publication commands, or North Star checkpoint gates.
