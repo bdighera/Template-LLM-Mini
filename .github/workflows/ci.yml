@@ -39,7 +39,7 @@ jobs:
       - name: Hook launcher runs the guard
         shell: bash
         run: |
-          payload='{"hook_event_name":"PreToolUse","tool_name":"Write","tool_input":{"file_path":"tasks.md","content":"x"}}'
+          payload='{"hook_event_name":"PreToolUse","tool_name":"Write","tool_input":{"file_path":"TASKS.md","content":"x"}}'
           echo "$payload" | sh scripts/workflow.sh guard hook | tee hook.json
           grep -q '"permissionDecision": "deny"' hook.json
 

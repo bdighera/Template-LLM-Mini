@@ -94,7 +94,7 @@ def source_allowed(ref):
     return (not any(p in EXCLUDED for p in parts)
             and (not parts or parts[0] not in ROOT_EXCLUDED)
             and not (len(parts) >= 2 and parts[:2] == ('prompts', 'logs'))
-            and Path(ref).name not in {'tasks.md', 'project-config.json'}
+            and Path(ref).name.casefold() not in {'tasks.md', 'project-config.json'}
             and not any(p == '.env' or p.startswith('.env.') for p in parts)
             and Path(ref).suffix not in {'.pyc', '.tmp'})
 
@@ -423,7 +423,7 @@ def save(state):
                       '', 'Data question: ' + (task.get('data_question') or 'none')]
         latest = [f'{kind}: [{Path(task[kind][-1]).name}]({task[kind][-1]})' for kind in KINDS if task.get(kind)]
         lines += ['', 'Latest evidence: ' + ('; '.join(latest) or 'none')]
-    write(ROOT / 'tasks.md', '\n'.join(lines) + '\n')
+    write(ROOT / 'TASKS.md', '\n'.join(lines) + '\n')
     entries = ['# Feature memories', '', 'Generated; load only relevant entries (`workflow.py recall "<words>"` ranks them).', '']
     for task in state['tasks']:
         for ref in task['memories']:
@@ -872,7 +872,7 @@ def project_readme(config):
         '## Acceptance criteria', '', *[f'- {criterion}' for criterion in p['acceptance_criteria']], '',
         '## Working on this project', '',
         'Agents start with AGENTS.md; Claude Code loads its hooks only when the session starts in this',
-        'directory. Workflow commands: [docs/workflow.md](docs/workflow.md). Task board: tasks.md.',
+        'directory. Workflow commands: [docs/workflow.md](docs/workflow.md). Task board: TASKS.md.',
         'Decisions: logging/journal.md. Project brief: PROJECT.md.', '',
         '## Checks', '', '```sh', checks, 'python3 scripts/workflow.py doctor', '```', '',
         'Generated once by `workflow.py configure` from the approved brief; edit freely.', ''])

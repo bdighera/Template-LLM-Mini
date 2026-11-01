@@ -46,7 +46,7 @@ warn about it; `doctor` reports it too.
 python3 scripts/workflow.py add --title 'API endpoint' --criterion 'GET /items works' \
     --path 'src/api/**' --path 'tests/test_api.py' --prompt request.md
 python3 scripts/workflow.py start T001        # claims T001 for this agent (lease)
-python3 scripts/workflow.py status            # board as JSON; tasks.md is the same board
+python3 scripts/workflow.py status            # board as JSON; TASKS.md is the same board
 python3 scripts/workflow.py claim T002 --ttl 60
 python3 scripts/workflow.py heartbeat T001    # extend the lease
 python3 scripts/workflow.py scope T001 --path 'src/api/**' --path 'src/models.py'
@@ -249,7 +249,7 @@ dataset contracts, provenance, profiling) is documented in
 
 ## State and evidence
 
-`.workflow/state.json` is authoritative; `tasks.md` and `memories/index.md` are
+`.workflow/state.json` is authoritative; `TASKS.md` and `memories/index.md` are
 generated. Keep state, artifacts, and config revisions together in Git. Multi-file
 updates are not one transaction.
 

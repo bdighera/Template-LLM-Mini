@@ -8,6 +8,20 @@ from harness import DATA_ADDON, HarnessTestCase, SOURCE
 
 
 class WorkflowTests(HarnessTestCase):
+    def test_uppercase_task_board_is_generated_and_excluded_from_sources(self):
+        self.configure(); self.add()
+        names = {path.name for path in self.root.iterdir()}
+        self.assertIn('TASKS.md', names)
+        self.assertNotIn('tasks.md', names)
+        self.assertIn('T001', (self.root / 'TASKS.md').read_text())
+        self.assertIn('Task board: TASKS.md', (self.root / 'README.md').read_text())
+        self.assertIn('`TASKS.md`', (self.root / 'AGENTS.md').read_text())
+        for board in ('TASKS.md', 'tasks.md'):
+            self.config['validation']['source_paths'] = [board]
+            self.put('config.json', self.config)
+            result = self.run_cli('validate-config', '--config', 'config.json', success=False)
+            self.assertIn('cannot fingerprint generated/data/environment path', result.stderr)
+
     def test_full_feature_and_completion_gates(self):
         self.configure(); self.add()
         self.run_cli('done', 'T001', success=False)
@@ -251,7 +265,7 @@ class WorkflowTests(HarnessTestCase):
 
     def test_generated_files_use_lf_on_every_platform(self):
         self.prepare_testing(); self.run_cli('test', 'T001')
-        for name in ('tasks.md', '.workflow/state.json', 'logging/journal.jsonl', 'logging/journal.md', 'AGENTS.md'):
+        for name in ('TASKS.md', '.workflow/state.json', 'logging/journal.jsonl', 'logging/journal.md', 'AGENTS.md'):
             self.assertNotIn(b'\r', (self.root / name).read_bytes(), name)
 
     def test_checks_that_change_source_invalidate_their_results(self):
@@ -576,7 +590,7 @@ class WorkflowTests(HarnessTestCase):
         self.run_cli(*base, '--prompt-text', 'Later', '--follows', 'T009', success=False)
         self.run_cli(*base[:-1], 'other.py', '--prompt-text', 'Harden it.', '--follows', 'T001')
         self.assertEqual(self.task(1)['follows'], 'T001')
-        self.assertIn('Follows: T001', (self.root / 'tasks.md').read_text())
+        self.assertIn('Follows: T001', (self.root / 'TASKS.md').read_text())
         self.run_cli('start', 'T001'); self.handoff('reviewer'); self.review(); self.handoff('tester')
         self.run_cli('test', 'T001'); self.run_cli('memory', 'T001', '--file', 'memory.md')
         self.handoff('coordinator')
@@ -601,7 +615,7 @@ class WorkflowTests(HarnessTestCase):
         record = json.loads((self.root / self.task()['reviews'][-1]).read_text())
         self.assertEqual((record['agent'], record['reviewer']), ('claude', 'claude-reviewer'))
         self.assertEqual(self.task()['reviewed_by'], 'claude-reviewer')
-        self.assertIn('Reviewed by: claude-reviewer', (self.root / 'tasks.md').read_text())
+        self.assertIn('Reviewed by: claude-reviewer', (self.root / 'TASKS.md').read_text())
 
 
     def test_configure_writes_project_readme_but_keeps_an_adopted_one(self):

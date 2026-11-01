@@ -16,7 +16,7 @@ import roles
 import workflow as wf
 
 # Written only by workflow.py (or sync-agents); hand edits break evidence hashes.
-PROTECTED = ('.workflow', 'handoffs', 'prompts/logs', 'memories/features', 'memories/index.md', 'tasks.md',
+PROTECTED = ('.workflow', 'handoffs', 'prompts/logs', 'memories/features', 'memories/index.md', 'TASKS.md',
              'logging/journal.jsonl', 'logging/journal.md', '.claude/agents')
 RAW = 'data/raw'
 ALLOW_SECRET = 'guard: allow-secret'
@@ -115,7 +115,7 @@ def bash_decision(command, agent):
     writes = [t for t in targets if t and (protected(t) or under(t, RAW))]
     if WRITE_COMMANDS.search(command):
         normalized = command.replace('\\', '/').casefold()  # data\raw and DATA/raw are data/raw on Windows.
-        writes += [prefix for prefix in PROTECTED + (RAW,) if prefix in normalized]
+        writes += [prefix for prefix in PROTECTED + (RAW,) if prefix.casefold() in normalized]
     if writes:
         return 'deny', (f'Command would modify {", ".join(sorted(set(writes)))}: workflow files change only through '
                         'scripts/workflow.py and data/raw/ is read-only.')
