@@ -134,7 +134,7 @@ without merging competing workflow-state copies.
 
 ## Evidence, guards and decisions
 
-`.workflow/state.json` is authoritative; `tasks.md` and memory indexes are generated.
+`.workflow/state.json` is authoritative; `TASKS.md` and memory indexes are generated.
 Use the workflow CLI for its state/artifacts instead of hand-editing them. Source
 fingerprints cover configured source paths plus referenced task source files;
 choose those paths to include application code, tests and dependency manifests.

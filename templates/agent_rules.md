@@ -2,7 +2,7 @@
 
 `scripts/guard.py` runs from Claude Code hooks, the Git pre-commit hook, and
 `workflow.py guard ...` for other tools. It blocks hand edits to workflow-owned
-files (`.workflow/`, `tasks.md`, `handoffs/`, `prompts/logs/`, `memories/`,
+files (`.workflow/`, `TASKS.md`, `handoffs/`, `prompts/logs/`, `memories/`,
 `logging/journal.*`, `.claude/agents/`), changes to `data/raw/` originals, source
 edits without your own live claim, commit-hook bypasses, data/.env/secret commits,
 and journal rewrites. It asks before downloads, new raw files, secret-like text,
@@ -81,7 +81,7 @@ locks state, so never edit the files it owns. Set your identity with
   claims it with a lease. `claim`, `heartbeat`, `release`, and `scope` manage claims.
 - Edit only inside your own claimed paths. Another agent's claim makes its task
   and paths read-only to you; pick other work or wait for release or expiry.
-- Check the board (`tasks.md` or `status`) before starting. Each parallel agent
+- Check the board (`TASKS.md` or `status`) before starting. Each parallel agent
   that edits repository files MUST use its own Git worktree and dedicated branch.
   A branch alone does not isolate a shared working directory. Never switch
   branches in another active agent's working directory. Read-only reviewers may
