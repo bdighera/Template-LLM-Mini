@@ -1,0 +1,7 @@
+{
+  "task": "T001",
+  "cycle": 1,
+  "snapshot": "44d5cf9b39343643be81a1ef6de38ba73f0f1317b2292a341397705036f9176e",
+  "agent": "codex",
+  "report": "Bounded authorization is separate from registration and claims; approved ordinary work proceeds without repeated approval. Material amendments invalidate evidence. Standing maintenance has compact verification/completion, with promotion to standard for growing work. Legacy fingerprints and behavior are preserved until approved adoption.\n\nIndependent review: governance_review passed at review_ref 4ccff1b18085. Configured self-test and strict coordination commands executed and returned 0 for this task. Final discovered suite sizes: core 130, data analysis 44, coordination 15. Strict coordination requires zero skipped tests and current schema. Documentation check validated 25 local links/anchors; git diff --check passed. Existing optional environment reused; no new dependencies installed. Sandbox socket restrictions required permitted test execution. No live/production readiness claim or native-Windows validation.\n"
+}

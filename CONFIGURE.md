@@ -21,7 +21,7 @@ template remote, and approved fixtures.
 | Project | Name, purpose, users, scope, exclusions, observable acceptance criteria? | One focused deliverable |
 | North Star | Core vision, guiding principles, worthwhile capabilities, exclusions? | Propose project-specific direction from the interview; approve it with the brief and replace the inherited template vision after approval |
 | Technology | Languages, frameworks, existing dependencies, reuse opportunities, package manager, virtual environment, manifest/lockfile and approved installation scope? | Python for deterministic components; evaluate existing dependencies and suitable maintained libraries before custom code; approve new packages before installation into the project virtual environment; keep the core harness dependency-free |
-| Data | Sources, sensitivity, size, retention, generated outputs, approved Git fixtures? | raw/ read-only, processed/, generated/; contents ignored; `approved_fixtures: []` (configure un-ignores listed fixtures) |
+| Data | Sources, sensitivity, size, retention, generated outputs, approved Git fixtures? | raw/ read-only, processed/, generated/, synthetic/datasets/ and synthetic/runs/; contents ignored; `approved_fixtures: []` (configure un-ignores listed fixtures) |
 | Evidence | External data staged under ./data, download approvals, unknown-source handling? | ./data only; explicit download approval; "source unavailable" rather than invention |
 | Data-analysis add-on | Will tasks fetch, consume, or produce datasets that need inspection or an analyzer? | `addons.data_analysis: false`; if true, add the `analysis` section (below) |
 | Roles | Builder/reviewer/tester policies; any custom roles; which runtime plays each? | Three required roles in `agents/`; analyzer and fetcher load with the data add-on |
@@ -30,11 +30,12 @@ template remote, and approved fixtures.
 | Review | Independent review, approved same-agent fallback, or cross-agent? Reviewer identity? | `independent` (reviewer named with `--reviewer`); `cross-agent` when two assistants are available |
 | Handoffs | Repair allowance? | Built-in fields; `max_repairs: 2` |
 | Tasks | Granularity, dependencies, path scopes, done criteria? | One reviewable feature per task with explicit `--path` globs |
-| Prompts and memory | What counts as a major prompt; retention? | Requests, scope changes, assignments; one feature memory per task |
+| Prompts and memory | What counts as a major prompt; retention? | Requests, scope changes, assignments; one feature memory per standard task; compact maintenance completion |
 | Decision journal | Which choices are significant; retrieval budget; exclusions? | Significant choices and milestones; compact latest 20 / 6000 chars; no secrets or raw data |
 | Context | Context size and compaction expectations? | `context.max_chars: 12000`; checkpoint before compaction |
 | Validation | Source roots, test commands, timeout, diagnostics? | Add application dirs to `source_paths`; `unittest discover -s tests` (fails until the project has a test); `timeout_seconds: 60`; diagnostics off |
-| Approvals | What needs approval beyond the defaults? | Every feature enhancement, substantial fixes, downloads, setup |
+| Approvals | Bounded or legacy governance; standing narrow-maintenance approval; material escalation boundaries? | Bounded task authorization; maintenance disabled until explicitly approved; downloads, setup and material expansions need approval |
+| Synthetic testing | Local root, input versions, provenance, sensitivity, retention and disposable cleanup approval? | data/synthetic; immutable datasets and isolated runs; cleanup disabled until approved |
 | Delivery | Documentation, deployment, supported environments, definition of done? | Evidence, review, executed tests, memory |
 | Execution boundary | Any component where deterministic vs judgment is unclear? | Clarify first and record in `boundary_decisions` |
 | Template cleanup | Which template components does this project not need? | Prune everything the use case does not need (see below) |
@@ -81,9 +82,11 @@ agents, or compact context. Paths, states, and handoff fields are fixed in code.
 
 Source fingerprints skip data, workflow artifacts, environments, caches, and build
 outputs. Choose source roots that cover everything whose change should invalidate
-a review. Files outside the selection are neither fingerprinted nor claim-checked.
-Running a builder's processor writes to `data/processed/` or `data/generated/`
-outside the task's paths; that is expected (Git ignores data) and is not a scope
+a review. Legacy source fingerprints and edit claims cover selected roots. In bounded mode,
+Git change evidence additionally covers tracked and nonignored untracked source,
+and the edit guard requires claims for source outside the fingerprint roots too.
+Running a builder's processor writes to `data/processed/`, `data/generated/` or an approved synthetic run
+outside source paths but, in bounded mode, within declared output locations; that is expected (Git ignores data) and is not a scope
 violation. Declare outputs worth inspecting as `post` datasets (add-on).
 
 Project validation commands cover project tests only; the harness's own tests run
@@ -136,3 +139,11 @@ Applying regenerates AGENTS.md and PROJECT.md; keep project-specific rules in th
 marked `project-rules` block at the end of each file, which is carried over verbatim.
 Changing dataset scope resets active analysis scope; unrelated edits keep it.
 
+
+## Bounded governance and synthetic testing
+
+See [governance](docs/governance.md) and [synthetic data](docs/synthetic-data.md).
+The new template defaults to bounded governance. Existing v2 configs may omit
+these optional sections and retain legacy behavior until an approved update.
+Include docs and NORTH_STAR.md in source_paths where they should invalidate
+review evidence. Synthetic inspection uses explicit file specs and pre/post phases.

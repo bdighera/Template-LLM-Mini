@@ -137,13 +137,14 @@ def validate_settings(settings, root=None):
                 'Column rules apply only to structured formats')
 
 
-def validate_selection(root, settings, selectors, phases):
+def validate_selection(root, settings, selectors, phases, synthetic_root=None):
     require(phases and set(phases) <= PHASES, 'Select pre and/or post phases')
     selected = list(dict.fromkeys(canonical_data_ref(ref) for ref in selectors))
     known = {canonical_data_ref(spec['path']): spec for spec in settings['datasets']}
     for ref in selected:
         data_path(root, ref)
         spec = known.get(ref)
+        require(not synthetic_root or not ref.startswith(synthetic_root.rstrip('/') + '/') or spec is not None, 'Synthetic datasets require an explicit analysis.datasets spec with a phase')
         inferred = 'post' if len(Path(ref).parts) > 2 and Path(ref).parts[1] in ('processed', 'generated') else 'pre'
         applicable = PHASES if spec and spec['phase'] == 'both' else {spec['phase'] if spec else inferred}
         require(bool(applicable & set(phases)), f'Dataset selection conflicts with requested phases: {ref}')
@@ -275,7 +276,7 @@ def scan(root, config, task, phase):
         result['reason'] = task['data_reason'] or 'Phase not requested'
         return seal(result)
     specs = [s for s in settings['datasets'] if s['phase'] in (phase, 'both')]
-    selectors = validate_selection(root, settings, task['datasets'], task['analysis_phases'])
+    selectors = validate_selection(root, settings, task['datasets'], task['analysis_phases'], synthetic_root=config.get('synthetic', {}).get('root'))
     if selectors:
         specs = [s for s in specs if s['path'] in selectors]
         known = {s['path'] for s in settings['datasets']}
@@ -291,6 +292,8 @@ def scan(root, config, task, phase):
         elif base.exists():
             for directory, dirs, names in os.walk(base, followlinks=False):
                 dirs[:] = sorted(d for d in dirs if not d.startswith('.'))
+                synthetic_root = config.get('synthetic', {}).get('root')
+                dirs[:] = [d for d in dirs if (Path(directory) / d).relative_to(root).as_posix() != synthetic_root]
                 if Path(directory) == base:
                     dirs[:] = [d for d in dirs if (phase == 'post') == (d in ('processed', 'generated'))]
                 for name in list(dirs):

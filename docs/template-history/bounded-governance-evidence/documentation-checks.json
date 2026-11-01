@@ -1,0 +1,105 @@
+{
+  "checked_links": 25,
+  "checks": [
+    {
+      "source": "README.md",
+      "target": "addons/agent_coordination/requirements.txt"
+    },
+    {
+      "source": "README.md",
+      "target": "templates/agent_rules.md"
+    },
+    {
+      "source": "README.md",
+      "target": "CONFIGURE.md"
+    },
+    {
+      "source": "README.md",
+      "target": "prompts/template_prompt_initialization.md"
+    },
+    {
+      "source": "README.md",
+      "target": "NORTH_STAR.md"
+    },
+    {
+      "source": "README.md",
+      "target": "templates/agent_rules.md"
+    },
+    {
+      "source": "README.md",
+      "target": "docs/workflow.md#configuration-updates"
+    },
+    {
+      "source": "README.md",
+      "target": "docs/workflow.md"
+    },
+    {
+      "source": "README.md",
+      "target": "docs/governance.md"
+    },
+    {
+      "source": "README.md",
+      "target": "agents/"
+    },
+    {
+      "source": "README.md",
+      "target": "templates/"
+    },
+    {
+      "source": "README.md",
+      "target": "scripts/roles.py"
+    },
+    {
+      "source": "README.md",
+      "target": "docs/synthetic-data.md"
+    },
+    {
+      "source": "README.md",
+      "target": "logging/README.md"
+    },
+    {
+      "source": "README.md",
+      "target": "addons/data_analysis/README.md"
+    },
+    {
+      "source": "README.md",
+      "target": "addons/agent_coordination/README.md"
+    },
+    {
+      "source": "README.md",
+      "target": "LICENSE"
+    },
+    {
+      "source": "CONFIGURE.md",
+      "target": "docs/governance.md"
+    },
+    {
+      "source": "CONFIGURE.md",
+      "target": "docs/synthetic-data.md"
+    },
+    {
+      "source": "docs/workflow.md",
+      "target": "governance.md"
+    },
+    {
+      "source": "docs/workflow.md",
+      "target": "synthetic-data.md"
+    },
+    {
+      "source": "docs/workflow.md",
+      "target": "governance.md#review-and-enforcement-coverage"
+    },
+    {
+      "source": "docs/workflow.md",
+      "target": "../logging/README.md"
+    },
+    {
+      "source": "docs/workflow.md",
+      "target": "synthetic-data.md"
+    },
+    {
+      "source": "docs/workflow.md",
+      "target": "synthetic-data.md"
+    }
+  ]
+}

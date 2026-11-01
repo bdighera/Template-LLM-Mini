@@ -23,7 +23,9 @@ settings Python and the hooks enforce and which remain assistant policy.
 Cover in particular: whether the data-analysis add-on is needed; the roles and which
 assistant plays each; how parallel agents split work (path scopes, lease length,
 max_concurrency, review mode); validation source roots and commands; approval
-boundaries; and which template components to prune so the project carries only
+boundaries (bounded authorization, material escalation and approved maintenance);
+synthetic testing datasets/runs, configurable local root, manifests, sensitivity
+and retention/cleanup approval; and which template components to prune so the project carries only
 what its use case needs.
 
 Agree a separate Git worktree and dedicated branch for each parallel agent that

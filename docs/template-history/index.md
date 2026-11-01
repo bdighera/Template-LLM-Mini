@@ -30,3 +30,5 @@ Prompt 002 (initialization prompt) produced the primer, not a feature memory.
 - [Uppercase task board](memories/019-uppercase-task-board.md)
 
 - [Lightweight North Star planning and review](memories/020-lightweight-north-star.md)
+
+- [Bounded governance and synthetic testing data](memories/021-bounded-governance-synthetic.md)

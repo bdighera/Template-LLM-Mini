@@ -1,7 +1,7 @@
 # template_llm_mini
 
 A lightweight Python workflow harness for coding assistants such as Claude Code
-and Codex: **define → build → independent QC → test → memory → done**.
+and Codex: **define → build → independent QC → test → memory → done**, with a compact path for approved maintenance.
 It combines approved project configuration, a task board, scoped claims, evidence
 checks and concise handoffs. The assistant supplies model access, delegation and
 context compaction; the harness records and checks the workflow.
@@ -110,11 +110,17 @@ Set `WORKFLOW_AGENT` or pass `--agent`; Claude's shipped settings use `claude`.
 Codex and other tools can use `--agent codex`. Unset identity is recorded as `local`
 and produces warnings for workflow mutations.
 
-Register an approved task with explicit paths and acceptance criteria, start/claim
-it, then follow the role handoffs. Completion requires current review, passing
+Register a task with explicit paths and acceptance criteria. New configurations
+use bounded governance: record the approved boundary with `authorize --approved`
+before `start`; claims alone are not approval. Review and commit the configured
+project baseline before the first bounded task. Covered implementation choices need
+no repeated permission. Standard completion requires current review, passing
 executed checks, a feature memory and a final coordinator handoff. Failed checks
 invalidate prior passes; source changes require fresh evidence. The configurable
-repair limit stops repeated repair cycles for user direction.
+repair limit stops repeated repair cycles for user direction. An approved standing
+maintenance policy permits `--class maintenance` and a compact `maintenance-finish`
+record instead. Existing configurations retain legacy behavior until approved
+adoption. See [bounded governance](docs/governance.md).
 
 Useful read-only entry points after configuration:
 
@@ -153,9 +159,13 @@ The pre-commit hook checks journal rewrites, data files, secret-like content and
 fixture-ignore consistency. `doctor` reports setup issues such as hooks, identities, template
 remotes and missing fixtures. Guards are mechanical checks, not an OS sandbox;
 shell checks are best effort and shell source edits are not claim-checked.
+`doctor` and role context distinguish automatic, manual, policy-only and unknown
+coverage. Bounded tasks also compare actual Git changes and hash declared outputs.
 
 External evidence belongs under `data/`: originals in `raw/`, transformations in
-`processed/`, synthetic/model outputs in `generated/`. Originals are read-only;
+`processed/`, and other generated outputs in `generated/`. Versioned synthetic
+test inputs and isolated run outputs use `synthetic/datasets/` and `synthetic/runs/`;
+see [synthetic testing data](docs/synthetic-data.md). Originals are read-only;
 Git ignores data contents except explicitly approved fixtures. Downloads require
 approval (registered data sources can provide that approval). Preserve attribution
 and uncertainty rather than inventing missing facts. New package installation is
@@ -239,7 +249,7 @@ human/agent responsibilities. The harness provides no OS containment guarantee.
 | `scripts/ci.py`, `scripts/tests/`, `.github/workflows/ci.yml` | Strict CI tooling, harness regressions and platform matrices |
 | `addons/data_analysis/`, `addons/agent_coordination/` | Optional data workflow and local JSON/MCP service |
 | `tests/` | Application tests; empty in the template |
-| `data/` | Raw, processed and generated data, ignored by default |
+| `data/` | Raw, processed, generated and synthetic testing data, ignored by default |
 | `logging/`, `memories/`, `handoffs/`, `prompts/logs/` | Workflow decision, context and evidence artifacts |
 | `docs/workflow.md`, `docs/template-history/` | Command reference and historical template-maintenance records |
 

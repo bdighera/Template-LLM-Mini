@@ -26,7 +26,7 @@ def checks(root, config, agent_from_env):
     found = []
     add = lambda level, message: found.append((level, message))
     if agent_from_env:
-        add('ok', f'agent identity from WORKFLOW_AGENT ({os.environ["WORKFLOW_AGENT"]})')
+        add('ok', f'agent identity from WORKFLOW_AGENT ({os.environ.get("WORKFLOW_AGENT", "explicit --agent")})')
     else:
         add('warn', 'WORKFLOW_AGENT is unset, so work is recorded as "local"; Claude gets it from '
                     '.claude/settings.json when hooks load, other agents export it (e.g. WORKFLOW_AGENT=codex)')
@@ -63,3 +63,18 @@ def checks(root, config, agent_from_env):
 
 def render(found):
     return '\n'.join(f'{level}: {message}' for level, message in found)
+
+
+def coverage(root, config, agent, role=None):
+    """Report observable setup, never infer that an editor actually invokes hooks."""
+    hook = git(root, 'config', '--get', 'core.hooksPath') == 'githooks' and os.access(root / 'githooks/pre-commit', os.X_OK)
+    return {
+        'identity': {'status': 'policy-only', 'detail': f'{agent}; self-declared, not authenticated'},
+        'role': {'status': 'manually-invoked' if role else 'unknown', 'detail': role or 'No role supplied'},
+        'edit_interception': {'status': 'unknown', 'detail': 'Hook configuration does not prove active tool interception; invoke guard edit before writes when uncertain'},
+        'commit_checks': {'status': 'automatically-enforced' if hook else 'unknown', 'detail': 'Local Git pre-commit hook installed' if hook else 'Hook installation unverified'},
+        'claims': {'status': 'manually-invoked', 'detail': 'guard edit checks live claims; shell source writes are not intercepted'},
+        'completion_scope': {'status': 'automatically-enforced' if config and config.get('governance', {}).get('mode') == 'bounded' else 'policy-only',
+                             'detail': 'Canonical bounded completion checks Git changes; worktree-local, not a global lock'},
+        'external_sharing': {'status': 'policy-only', 'detail': 'No general network or filesystem sandbox'},
+    }

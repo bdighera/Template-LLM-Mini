@@ -1,0 +1,11 @@
+{
+  "purpose": "Describe testing purpose",
+  "origin": "Local synthetic generator or approved external source",
+  "generator_revision": "Tracked generator revision, or not applicable",
+  "parameters": {},
+  "seed": null,
+  "reproducibility": "State guarantees and nondeterministic limitations",
+  "sensitivity": "Explicit handling classification; synthetic does not imply public",
+  "retention": "Retained dataset or disposable run under approved policy",
+  "lineage": []
+}
