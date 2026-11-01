@@ -69,5 +69,13 @@
   "boundary_decisions": "No unresolved ambiguity",
   "context": {
     "max_chars": 12000
+  },
+  "governance": {
+    "mode": "bounded",
+    "maintenance_approval": "none"
+  },
+  "synthetic": {
+    "root": "data/synthetic",
+    "disposable_cleanup_approval": "none"
   }
 }

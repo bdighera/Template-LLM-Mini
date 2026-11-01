@@ -1,0 +1,84 @@
+{
+  "config_version": 2,
+  "project": {
+    "name": "Template maintenance",
+    "purpose": "Implement approved bounded governance and synthetic testing architecture",
+    "users": "Template maintainers",
+    "scope": "Approved six-item plan in this session",
+    "exclusions": "Remote adapters, existing data migration, publication",
+    "acceptance_criteria": [
+      "Approved plan implemented with review and validation"
+    ]
+  },
+  "technology": "Standard-library Python",
+  "addons": {
+    "data_analysis": false
+  },
+  "prune": [],
+  "data": {
+    "usage": "Disposable synthetic validation only",
+    "sources": "Local generated fixtures",
+    "sensitivity": "No actual sensitive data",
+    "expected_size": "Small test fixtures",
+    "retention": "Retain review evidence; disposable test data",
+    "generated_outputs": "Isolated test runs",
+    "approved_fixtures": [],
+    "raw_policy": "Read-only originals; transformations go to data/processed/",
+    "git_policy": "Exclude data contents by default; track folder placeholders only; small fixtures require explicit approval"
+  },
+  "roles": [
+    "builder",
+    "reviewer",
+    "tester"
+  ],
+  "delegation": {
+    "capabilities": "Independent read-only reviewer",
+    "review_mode": "independent",
+    "max_concurrency": 2
+  },
+  "coordination": {
+    "lease_minutes": 120
+  },
+  "handoffs": {
+    "policy": "Built-in fields and handoffs/ directory; builder to reviewer to tester",
+    "max_repairs": 2
+  },
+  "tasks": "One reviewable feature per task; built-in states and evidence checks",
+  "prompts": "Log feature requests, material scope changes, and assignments; retain in Git; redact secrets before writing",
+  "memory": "Save a feature memory after each task; record significant decisions and milestones in logging/journal.jsonl; retrieve compact entries by default; retain history in Git",
+  "tokens": "Concise outputs; compact at phase boundaries or context pressure after saving a handoff; usage only when exposed",
+  "validation": {
+    "commands": [
+      [
+        "/home/bdighera/template_llm_mini/addons/agent_coordination/.venv/bin/python",
+        "/home/bdighera/template_llm_mini/scripts/workflow.py",
+        "self-test"
+      ],
+      [
+        "/home/bdighera/template_llm_mini/addons/agent_coordination/.venv/bin/python",
+        "/home/bdighera/template_llm_mini/scripts/ci.py",
+        "coordination-test"
+      ]
+    ],
+    "source_paths": [
+      "scripts",
+      "tests",
+      "templates",
+      "agents",
+      "githooks",
+      "AGENTS.md",
+      "PROJECT.md",
+      ".gitignore"
+    ],
+    "timeout_seconds": 3600,
+    "diagnostics": "off",
+    "summary_max_chars": 2000
+  },
+  "approvals": "User approved the final six-item plan and all assumptions in this conversation",
+  "delivery": "Local reviewable changes, no merge or publication",
+  "execution_boundary": "All deterministic components MUST use Python scripts; third-party libraries are allowed in applications. Evaluate existing dependencies and suitable maintained libraries before custom equivalents. Install new packages only within explicitly approved scope, using the project virtual environment and dependency manifest/lockfile. The core harness remains standard-library-only. Models handle judgment only. Clarify ambiguous cases with the user before implementation.",
+  "boundary_decisions": "No unresolved ambiguity",
+  "context": {
+    "max_chars": 12000
+  }
+}

@@ -474,6 +474,53 @@ class DataAddonTests(HarnessTestCase):
         result = self.run_cli('analysis-report', 'T001', '--phase', 'pre', '--verdict', 'pass', '--file', 'analysis.md')
         self.assertIn('T001 resumed: building (claim: claude)', result.stdout)
 
+    def test_synthetic_discovery_is_explicit_and_phases_are_respected(self):
+        self.config['synthetic'] = dict(root='data/testing', disposable_cleanup_approval='none')
+        self.put('config.json', self.config)
+        self.put('data/testing/datasets/example/v1/records.csv', 'id\n1\n')
+        self.put('data/testing/runs/run1/outputs/result.csv', 'id\n2\n')
+        self.configure(); self.add(data='auto'); self.run_cli('start', 'T001')
+        self.assertEqual(self.task()['analysis_state']['pre']['status'], 'skipped')
+        self.assertFalse(self.task()['inspections'])
+        # No phase inference from either the canonical or relocated synthetic root.
+        self.run_cli('add', '--title', 'Selected synthetic', '--criterion', 'Works', '--prompt-text', 'Inspect',
+                     '--path', 'example.py', '--data', 'auto', '--dataset', 'data/testing/datasets/example/v1/records.csv', success=False)
+
+    def test_explicit_synthetic_specs_allow_pre_and_post_selection(self):
+        self.config['synthetic'] = dict(root='data/synthetic', disposable_cleanup_approval='none')
+        settings = self.config['analysis']
+        spec = json.loads((self.root / 'addons/data_analysis/templates/dataset.json').read_text())
+        inputs = 'data/synthetic/datasets/example/v1/records.csv'
+        outputs = 'data/synthetic/runs/run1/outputs/result.csv'
+        settings['datasets'] = [spec | {'path': inputs, 'phase': 'pre', 'format': 'csv'},
+                                spec | {'path': outputs, 'phase': 'post', 'format': 'csv'}]
+        self.put('config.json', self.config)
+        self.put(inputs, 'id\n1\n'); self.configure()
+        self.add(data='auto', phases=['pre', 'post'])
+        self.run_cli('start', 'T001', success=False); self.analyzer_pass('pre')
+        self.put(outputs, 'id\n2\n')
+        self.run_cli('handoff', 'T001', '--to', 'reviewer', '--file', 'handoff.json', success=False)
+        self.analyzer_pass('post'); self.handoff('reviewer')
+        self.assertEqual(self.task()['analysis_state']['pre']['status'], 'pass')
+        self.assertEqual(self.task()['analysis_state']['post']['status'], 'pass')
+
+    def test_legacy_synthetic_discovery_remains_unchanged_without_adoption(self):
+        self.put('data/synthetic/old.csv', 'id\n1\n')
+        self.configure(); self.add(data='auto'); self.run_cli('start', 'T001', success=False)
+        self.assertEqual(self.task()['status'], 'analyzing')
+        self.assertTrue(self.task()['inspections'])
+
+
+    def test_nested_synthetic_root_does_not_hide_sibling_inputs(self):
+        self.config['synthetic'] = dict(root='data/testing/synthetic', disposable_cleanup_approval='none')
+        self.put('config.json', self.config)
+        self.put('data/testing/reference.csv', 'id\n1\n')
+        self.put('data/testing/synthetic/datasets/example/v1/records.csv', 'id\n2\n')
+        self.configure(); self.add(data='auto'); self.run_cli('start', 'T001', success=False)
+        inspection = json.loads((self.root / self.task()['inspections'][-1]).read_text())
+        self.assertIn('data/testing/reference.csv', json.dumps(inspection))
+        self.assertNotIn('data/testing/synthetic/datasets', json.dumps(inspection))
+
 
 if __name__ == '__main__':
     unittest.main()

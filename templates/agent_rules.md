@@ -15,15 +15,30 @@ only when the session starts in the project root; otherwise call
 
 ## Approval and scope
 
-Every feature enhancement, however small, needs a concrete scope/change/validation
-plan and explicit user approval before implementation. Clarify material questions
-first. Substantial fixes need approval too; only clear, narrow fixes or maintenance
-that add no functionality may skip the separate plan. Ask when classification is
-uncertain; material scope changes need renewed approval. Agents never approve for
-the user. Read-only work needs no approval. An approval request that leaves
-questions open must end with an "Assumed unless you object" list; a bare approval
-accepts exactly those defaults and nothing else. No exception removes task
-tracking, QC, tests, or feature memory.
+For bounded governance (`governance.mode: bounded`), registration, live ownership
+claims and user authorization are distinct. Standard work needs an approved
+objective, criteria, source paths, output locations, permissions and approval
+reference recorded with `authorize --approved`. Agents never approve for the user.
+Approval covers ordinary implementation choices and repairs inside that boundary;
+do not repeatedly request permission for covered work. Renew approval for expanded
+objectives/criteria or paths, new sensitive-data access, external transfers,
+unapproved dependencies, destructive actions, publication or direction changes.
+Narrowing paths inside the approved envelope needs a record, not renewed approval.
+
+Maintenance is permitted only under an explicitly approved standing policy, for
+small corrections and narrow fixes adding no capability or governance changes.
+Uncertainty defaults to standard. Use `maintenance-finish` with a compact change
+record, appropriate executed or manual verification, and final handoff. Separate
+review/memory artifacts are not required on this path. Promote growing work with
+`classify --class standard` and obtain task authorization before continuing.
+
+Existing configurations without governance settings (or mode legacy) retain the
+original policy: every feature enhancement needs a concrete scope/change/validation
+plan and explicit approval; substantial fixes also need approval. Clear narrow
+maintenance may skip the separate plan but retains the standard completion flow.
+Material scope changes need renewed approval. Read-only work needs no approval.
+An approval request with unresolved defaults must end with an "Assumed unless you
+object" list; approval accepts exactly those defaults. See docs/governance.md.
 
 ## North Star alignment
 
@@ -83,7 +98,15 @@ QC rejects unsupported claims. Python validates structure and references, not tr
 ## Data layout
 
 `data/raw/` holds read-only originals, `data/processed/` transformations, and
-`data/generated/` synthetic or model-produced data. Data stays out of Git unless
+`data/generated/` other generated outputs. `data/synthetic/datasets/<id>/<version>/`
+holds immutable reusable synthetic test inputs; `data/synthetic/runs/<run-id>/`
+holds isolated intermediate and output files. Use synthetic lifecycle commands,
+explicit input versions, manifests and hashes; generator code remains tracked
+source. Synthetic status does not establish sensitivity. External acquisition
+still needs approval and provenance, without mandatory raw/ duplication unless
+the preservation policy requires it. Only explicitly disposable runs may use an
+approved cleanup policy; retained data deletion needs separate approval. See
+docs/synthetic-data.md. Data stays out of Git unless
 listed in `data.approved_fixtures`. Follow the configured sensitivity and
 retention policies; deleting data needs separate user approval.
 
@@ -113,16 +136,21 @@ locks state, so never edit the files it owns. Set your identity with
 
 Build, then independent QC, then tests, with structured handoffs
 (templates/handoff.json; later handoffs may reuse the previous one with `--set`).
-Review reports cite the current `review_ref`; deferred review findings become
+Review actual changes against approval and criteria; path ownership alone does
+not establish necessity. Bounded tasks record their starting Git revision and
+block out-of-scope source changes at handoff/completion. Review reports cite the
+current `review_ref`; deferred review findings become
 `add --follows TASK` follow-ups. Workers return reports and proposed handoffs; the agent
 holding the claim runs the workflow commands. Never describe same-agent QC as
 independent; without independent agents, ask for an independent session or
 approval of a same-agent fallback. Stop for user direction at the repair limit.
-Completion needs a current review, executed checks, a feature memory, and a final
+Standard-task completion needs a current review, executed checks, a feature memory, and a final
 handoff. Report measured token usage only when it is exposed.
 
 Delegate with `context TASK --role ROLE`; role policies and prompts live in
 `agents/<role>.md` (Claude subagents are generated from them with `sync-agents`).
+Use doctor/context enforcement coverage: configuration alone does not prove active
+hooks; identity is self-declared and shell source edits are not claim-intercepted.
 Read PROJECT.md once for scope and only the relevant parts of
 `.workflow/config.json`. Record source directories in `validation.source_paths`.
 Never claim whole-project coverage when the selection is narrower.

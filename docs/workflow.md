@@ -45,6 +45,8 @@ warn about it; `doctor` reports it too.
 ```sh
 python3 scripts/workflow.py add --title 'API endpoint' --criterion 'GET /items works' \
     --path 'src/api/**' --path 'tests/test_api.py' --prompt request.md
+# Bounded mode: fill templates/authorization.json with the user's approved boundary.
+python3 scripts/workflow.py authorize T001 --file /tmp/task-authorization.json --approved
 python3 scripts/workflow.py start T001        # claims T001 for this agent (lease)
 python3 scripts/workflow.py status            # board as JSON; TASKS.md is the same board
 python3 scripts/workflow.py claim T002 --ttl 60
@@ -82,6 +84,12 @@ does not satisfy the local guard. Keep local assignments consistent with the
 authoritative board and return reports rather than overwriting its state.
 
 ## Task flow
+
+The flow below applies to standard tasks. See [bounded governance](governance.md)
+for authorization, material amendments, change manifests and compact maintenance.
+See [synthetic testing data](synthetic-data.md) for run, seal, publish, verify,
+resolve and cleanup commands. Existing v2 configurations adopt these optional
+settings only through update-config preview and approval.
 
 ```sh
 python3 scripts/workflow.py context T001 --role builder
@@ -166,6 +174,11 @@ the default, edit or remove that setting.
 
 ## Hooks
 
+`doctor` and role context include enforcement coverage. Configured hooks do not
+prove active edit interception. Bounded completion detects out-of-scope Git source
+changes; core identities and approvals remain assertions. See
+[coverage and limits](governance.md#review-and-enforcement-coverage).
+
 | Rule | Where it is enforced |
 |---|---|
 | Workflow-owned files are never hand-edited | Claude `PreToolUse` (Edit/Write/Bash) |
@@ -241,7 +254,8 @@ by default (latest 20, 6000 characters). See [logging/README.md](../logging/READ
 ## Data
 
 `data/raw/` holds read-only originals, `processed/` transformations, and
-`generated/` synthetic data. Git ignores contents except `.gitkeep` and
+`generated/` other generated outputs; synthetic testing inputs and run outputs use
+`synthetic/` as described in [synthetic data](synthetic-data.md). Git ignores contents except `.gitkeep` and
 `data.approved_fixtures`. The optional data-analysis add-on (analyzer, fetcher,
 dataset contracts, provenance, profiling) is documented in
 `addons/data_analysis/README.md` when the project keeps it; enable it with
@@ -326,3 +340,10 @@ with a missing or empty file need an approved vision before treating it as direc
 Role instructions reference the file; context packets do not embed its contents,
 so workers must read it explicitly. There are no automatic alignment judgments,
 scheduled reviews, publication commands, or North Star checkpoint gates.
+
+## Synthetic testing lifecycle
+
+`data/synthetic/datasets/<id>/<version>/` holds immutable reusable inputs;
+`data/synthetic/runs/<run-id>/` holds isolated execution outputs. The local root is
+configurable. Consult [synthetic data](synthetic-data.md) for exact commands,
+manifest requirements, explicit analysis phases and retention boundaries.

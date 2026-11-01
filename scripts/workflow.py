@@ -19,6 +19,7 @@ import coordination as coord
 import decision_journal
 import doctor
 import roles
+import governance
 
 ROOT = Path(__file__).resolve().parents[1]
 ADDON = ROOT / 'addons/data_analysis'
@@ -194,6 +195,15 @@ def validate_config(c):
     empty_ok = ('config.analysis.datasets', 'config.analysis.provenance', 'config.analysis.sources',
                 'config.data.approved_fixtures', 'config.prune')
 
+    # Optional extensions preserve v2 configured projects until approved adoption.
+    for extension in ('governance', 'synthetic'):
+        if extension not in c:
+            template.pop(extension, None)
+    if 'governance' in c:
+        governance.validate_settings(c['governance'])
+    if 'synthetic' in c:
+        import synthetic
+        synthetic.validate_settings(sys.modules[__name__], c['synthetic'])
     errors = []
 
     def structure(actual, expected, location='config'):
@@ -339,7 +349,12 @@ def fingerprint(config, task):
     snapshot = {'files': hashes, 'config': config, 'criteria': task['criteria'],
                 'data': {phase: inspect_phase(task, config, phase)['hash']
                          for phase in task['analysis_phases']} if task['data_mode'] != 'none' else {}}
-    return {'hash': digest(json.dumps(snapshot, sort_keys=True).encode()), 'files': hashes, 'data': snapshot['data']}
+    if governance.bounded(config):
+        snapshot['governance'] = governance.evidence(sys.modules[__name__], task, config)
+    result = {'hash': digest(json.dumps(snapshot, sort_keys=True).encode()), 'files': hashes, 'data': snapshot['data']}
+    if governance.bounded(config):
+        result['governance'] = snapshot['governance']
+    return result
 
 
 def invalidate(task, config, repair=False):
@@ -373,6 +388,15 @@ def validate_task(task, config, complete=False, live=False):
             require(path.is_file() and path.stat().st_size, f'Missing artifact: {ref}')
             require(digest(path.read_bytes()) == task['artifacts'].get(ref), f'Artifact changed: {ref}')
     require(task['prompts'], 'Missing major prompt')
+    if complete and task.get('maintenance_complete'):
+        require(task.get('task_class') == 'maintenance' and task.get('authorization'), 'Invalid maintenance completion')
+        require(task['snapshot'] and task['test_pass'], 'Maintenance verification required')
+        item = evidence(task, 'handoffs')
+        require(item['snapshot'] == task['snapshot']['hash'] and item['cycle'] == task['cycle'], 'Stale maintenance handoff')
+        require(item['target'] == 'coordinator' and item['verification'], 'Maintenance final handoff required')
+        if live:
+            require(fresh(task, config), 'Maintenance evidence is stale')
+        return
     if complete:
         for phase in task['analysis_phases']:
             entry = task['analysis_state'].get(phase, {})
@@ -622,6 +646,8 @@ def task_view(task):
     claim = coord.live_claim(task)
     return {key: task[key] for key in ('id', 'title', 'status', 'criteria', 'dependencies', 'cycle', 'repairs', 'paths')} | {
         'claim': claim, 'built_by': task.get('built_by'), 'reviewed_by': task.get('reviewed_by'),
+        'task_class': task.get('task_class', 'standard'), 'authorization': task.get('authorization'),
+        'starting_revision': task.get('starting_revision'),
         'follows': task.get('follows'),
         'data_mode': task['data_mode'], 'analysis': {phase: entry['status'] for phase, entry in task['analysis_state'].items()},
         'pending_question': task.get('data_question'),
@@ -661,6 +687,11 @@ def context(task, config, role, limit):
         candidates.append(('analysis_evidence', task['analysis_state']))
     candidates += [('technology', config['technology']), ('approvals', config['approvals']),
                    ('delegation', config['delegation']), ('validation', config['validation'])]
+    candidates.append(('enforcement', doctor.coverage(ROOT, config, AGENT, role)))
+    if governance.bounded(config) and task.get('starting_revision'):
+        candidates.append(('change_manifest', governance.manifest(sys.modules[__name__], task)))
+        if task['snapshot']:
+            candidates.append(('recorded_governance', task['snapshot'].get('governance')))
     if role == 'analyzer':
         candidates.insert(1, ('analysis_policy', {'data_access': config['analysis']['data_access']}))
     if role == 'fetcher':
@@ -697,12 +728,19 @@ def parser():
     c.add_argument('--prompt', help='File with the request'); c.add_argument('--prompt-text', help='The request as text')
     c.add_argument('--follows', help='Task whose review or result this follows up (does not block)')
     c.add_argument('--path', action='append', required=True, help='Glob of files this task may change (repeatable)')
+    c.add_argument('--class', dest='task_class', choices=['standard', 'maintenance'], default='standard')
     c.add_argument('--data', choices=['auto', 'expected', 'none'])
     c.add_argument('--data-reason', default='')
     c.add_argument('--dataset', action='append', default=[])
     c.add_argument('--analysis-phase', choices=['pre', 'post'], action='append')
-    for name in ('start', 'handoff', 'review', 'test', 'memory', 'done', 'block', 'unblock', 'log', 'checkpoint', 'rebuild', 'show', 'context', 'resume', 'data-check', 'analysis-report', 'data-resolve', 'profile', 'fetch', 'claim', 'release', 'heartbeat', 'scope', 'cancel', 'reopen'):
+    for name in ('start', 'handoff', 'review', 'test', 'memory', 'done', 'block', 'unblock', 'log', 'checkpoint', 'rebuild', 'show', 'context', 'resume', 'data-check', 'analysis-report', 'data-resolve', 'profile', 'fetch', 'claim', 'release', 'heartbeat', 'scope', 'cancel', 'reopen', 'authorize', 'changes', 'maintenance-finish', 'classify'):
         c = add(name); c.add_argument('task')
+        if name in ('authorize', 'maintenance-finish'):
+            c.add_argument('--file', required=True)
+        if name == 'authorize':
+            c.add_argument('--approved', action='store_true')
+        if name == 'classify':
+            c.add_argument('--class', dest='task_class', choices=['standard'], required=True)
         if name in ('review', 'memory', 'log', 'block', 'checkpoint', 'rebuild', 'analysis-report', 'data-resolve', 'cancel', 'reopen'):
             c.add_argument('--file', required=True)
         if name in ('data-check', 'analysis-report', 'profile'):
@@ -733,6 +771,17 @@ def parser():
             c.add_argument('--path', action='append', required=True)
         if name == 'fetch':
             c.add_argument('--source', required=True, help='Name of an approved entry in analysis.sources')
+    for name in ('synthetic-verify', 'synthetic-resolve'):
+        c = add(name); c.add_argument('--dataset', required=True); c.add_argument('--version', required=True)
+    for name in ('synthetic-run', 'synthetic-seal', 'synthetic-publish', 'synthetic-clean'):
+        c = add(name); c.add_argument('task'); c.add_argument('--run', required=name != 'synthetic-run')
+        if name == 'synthetic-run':
+            c.add_argument('--file', required=True); c.add_argument('--dataset', action='append', default=[])
+            c.add_argument('--disposable', action='store_true')
+        if name == 'synthetic-publish':
+            c.add_argument('--dataset', required=True); c.add_argument('--version', required=True)
+        if name == 'synthetic-clean':
+            c.add_argument('--approved', action='store_true')
     c = add('decide'); c.add_argument('--file', required=True); c.add_argument('--task'); c.add_argument('--supersedes')
     c = add('journal'); c.add_argument('--task'); c.add_argument('--type', choices=['decision', 'milestone']); c.add_argument('--id'); c.add_argument('--limit', type=int, default=20); c.add_argument('--all', action='store_true'); c.add_argument('--render', action='store_true'); c.add_argument('--full', action='store_true'); c.add_argument('--max-chars', type=int, default=6000)
     add('check')
@@ -944,7 +993,7 @@ def update_config(args):
     for task in state['tasks']:
         if task['status'] not in coord.FINISHED and enabled and task['data_mode'] != 'none':
             try:
-                da().validate_selection(ROOT, candidate['analysis'], task['datasets'], task['analysis_phases'])
+                da().validate_selection(ROOT, candidate['analysis'], task['datasets'], task['analysis_phases'], synthetic_root=candidate.get('synthetic', {}).get('root'))
             except ValueError as exc:
                 conflicts.append({'task': task['id'], 'issue': str(exc)})
     data_scope_changed = (current.get('analysis', {}).get('datasets') != candidate.get('analysis', {}).get('datasets'))
@@ -987,7 +1036,7 @@ def update_config(args):
         if not enabled:
             task.update(data_mode='none', data_reason='Data-analysis add-on disabled', datasets=[], analysis_phases=[])
         elif task['data_mode'] != 'none':
-            task['datasets'] = da().validate_selection(ROOT, candidate['analysis'], task['datasets'], task['analysis_phases'])
+            task['datasets'] = da().validate_selection(ROOT, candidate['analysis'], task['datasets'], task['analysis_phases'], synthetic_root=candidate.get('synthetic', {}).get('root'))
         if data_scope_changed or not enabled:
             task['analysis_state'] = {}
         else:
@@ -1031,7 +1080,7 @@ def require_access(task, cmd):
             'work on your own task or wait for release/expiry')
 
 
-READ_ONLY = {'status', 'recall', 'show', 'context', 'resume', 'validate-config', 'check', 'doctor', 'new', 'self-test'}
+READ_ONLY = {'status', 'recall', 'show', 'context', 'resume', 'validate-config', 'check', 'doctor', 'new', 'self-test', 'changes', 'synthetic-verify', 'synthetic-resolve'}
 # The harness's own tests; project validation commands cover project tests only.
 HARNESS_TESTS = ('scripts/tests', 'addons/data_analysis/tests', 'addons/agent_coordination/tests')
 
@@ -1079,6 +1128,8 @@ def dispatch(args):
     if cmd == 'doctor':
         found = doctor_findings()
         print(doctor.render(found))
+        config = read(ROOT / '.workflow/config.json') if (ROOT / '.workflow/config.json').exists() else None
+        print('Enforcement coverage:\n' + encoded(doctor.coverage(ROOT, config, AGENT, os.environ.get('WORKFLOW_ROLE'))))
         return 2 if any(level == 'warn' for level, _ in found) else 0
     if cmd == 'new':
         return new_project(args)
@@ -1121,11 +1172,16 @@ def dispatch(args):
                   evidence=['.workflow/config.json', 'PROJECT.md', 'AGENTS.md'])
         print('Configured. Read PROJECT.md and AGENTS.md. Generated: ' + (', '.join(generated) or 'no Claude subagents'))
         print('Pruned: ' + (', '.join(removals) or 'nothing'))
+        if governance.bounded(c):
+            print('Before the first bounded task, review and commit the configured project baseline (including generated guidance).')
         print(install_hooks())
         print('Setup check (workflow.py doctor):\n' + doctor.render(doctor_findings())); return
     config = read(ROOT / '.workflow/config.json'); validate_config(config)
     state = read(ROOT / '.workflow/state.json')
     require(state.get('schema_version') == VERSION, 'Old state schema; explicit migration required (do not overwrite history)')
+    if cmd.startswith('synthetic-'):
+        import synthetic
+        return synthetic.dispatch(sys.modules[__name__], args, config, state)
     if cmd == 'sync-agents':
         require(claude_enabled(config), 'claude_integration is pruned; nothing to generate')
         print('\n'.join(roles.sync(ROOT, roles.configured(ROOT, config))) or 'No Claude subagents (all roles are codex-only).'); return
@@ -1162,14 +1218,15 @@ def dispatch(args):
             mode = args.data or 'auto'
             require(mode != 'none' or text(args.data_reason), 'Explain why this task does not involve data')
             phases = [phase for phase in ('pre', 'post') if phase in (args.analysis_phase or config['analysis']['phases'])]
-            datasets = da().validate_selection(ROOT, config['analysis'], args.dataset, phases)
+            datasets = da().validate_selection(ROOT, config['analysis'], args.dataset, phases, synthetic_root=config.get('synthetic', {}).get('root'))
             require(mode != 'none' or not datasets, 'A no-data task cannot select datasets')
             reason = args.data_reason
         else:
             require(args.data in (None, 'none') and not args.dataset and not args.analysis_phase,
                     'Data options need addons.data_analysis enabled in an approved configuration')
             mode, phases, datasets, reason = 'none', [], [], args.data_reason or 'Data-analysis add-on disabled'
-        t = dict(id=f'T{len(state["tasks"]) + 1:03}', title=args.title, criteria=args.criterion,
+        require(args.task_class == 'standard' or governance.bounded(config), 'Maintenance class requires bounded governance')
+        t = dict(task_class=args.task_class, authorization=None, id=f'T{len(state["tasks"]) + 1:03}', title=args.title, criteria=args.criterion,
                  dependencies=args.depends, status='planned', repairs=0, cycle=0, review_pass=False,
                  test_pass=False, snapshot=None, source_files=[], artifacts={}, paths=paths, claim=None,
                  built_by=None, data_mode=mode, data_reason=reason, datasets=datasets,
@@ -1194,6 +1251,8 @@ def dispatch(args):
         limit = config['context']['max_chars'] if args.max_chars is None else args.max_chars
         require(2000 <= limit <= 100000, 'Context limit must be 2000..100000 characters')
         print(context(t, config, args.role, limit)); return
+    if cmd == 'changes':
+        print(encoded(governance.manifest(sys.modules[__name__], t))); return
     require(t['status'] != 'done' or cmd == 'log', 'Completed tasks are immutable; create a follow-up')
     require(t['status'] != 'cancelled' or cmd in ('log', 'reopen'), f'{t["id"]} is cancelled; ignore it unless the user asks to reopen it')
     if cmd in ('data-check', 'analysis-report', 'data-resolve', 'profile', 'fetch'):
@@ -1202,6 +1261,10 @@ def dispatch(args):
         require_access(t, cmd)
     validate_task(t, config)
     decision_journal.load(ROOT)
+    if cmd not in ('authorize', 'classify', 'start', 'claim', 'release', 'heartbeat', 'log', 'block', 'cancel', 'reopen') and governance.bounded(config):
+        governance.require_authorized(sys.modules[__name__], t, config)
+        claim = coord.live_claim(t)
+        require(claim and (claim['agent'] == AGENT or cmd == 'review'), 'Bounded mutations require your own live claim (review may record against the builder claim)')
     if cmd in ('review', 'test', 'memory', 'done') and t['status'] in ('reviewing', 'testing'):
         for phase in t['analysis_phases']:
             if not analysis_gate(t, config, state, phase):
@@ -1209,7 +1272,33 @@ def dispatch(args):
     if cmd in ('review', 'test', 'memory', 'done') or (cmd == 'handoff' and args.to != 'reviewer'):
         if t['snapshot']:
             ensure_fresh(t, config, state)
-    if cmd == 'claim':
+    if cmd == 'authorize':
+        require(governance.bounded(config), 'Adopt governance.mode bounded through update-config first')
+        require(args.approved, 'Explicit user approval required; agents cannot approve for the user')
+        payload = read(args.file)
+        require(isinstance(payload, dict) and strings(payload.get('criteria')) and payload['criteria'], 'Authorization criteria required')
+        governance.validate_authorization(sys.modules[__name__], t | {'criteria': payload['criteria']} if t.get('authorization') else t, payload)
+        previous = t.get('authorization')
+        if previous != payload:
+            if t['status'] not in ('planned', 'blocked'):
+                invalidate(t, config)
+            elif t['snapshot']:
+                invalidate(t, config)
+            t['authorization'] = payload
+            t['criteria'] = payload['criteria']
+            if t['status'] != 'planned' and not t.get('starting_revision'):
+                t['starting_revision'] = governance.starting_revision(ROOT)
+            t.pop('maintenance_complete', None)
+            artifact(t, 'prompts', encoded({'authorization': payload, 'previous': previous}) + '\n')
+    elif cmd == 'classify':
+        require(t.get('task_class') == 'maintenance', 'Only maintenance-to-standard reclassification is supported')
+        t['task_class'] = 'standard'
+        t['authorization'] = None
+        t.pop('maintenance_complete', None)
+        if t['status'] != 'planned':
+            invalidate(t, config)
+        artifact(t, 'prompts', 'Reclassified to standard; explicit task authorization required.\n', 'md')
+    elif cmd == 'claim':
         take_claim(t, state, config, args.ttl)
         print(f'{t["id"]} claimed by {AGENT} until {t["claim"]["expires"]}')
     elif cmd == 'heartbeat':
@@ -1222,7 +1311,11 @@ def dispatch(args):
     elif cmd == 'scope':
         paths = [coord.normalize_pattern(p) for p in args.path]
         require(all(source_allowed(p) for p in paths), 'Task paths must be source paths')
+        if governance.bounded(config):
+            require(governance.contained(t['authorization']['paths'], paths), 'Scope expansion needs an approved authorization amendment')
         previous = t['paths']; t['paths'] = paths
+        if paths != previous and t['snapshot']:
+            invalidate(t, config)
         if coord.live_claim(t):
             reason = coord.claim_conflicts(state, t, AGENT, config['delegation']['max_concurrency'])
             require(reason is None, reason)
@@ -1234,6 +1327,16 @@ def dispatch(args):
             'blocked': f'{t["id"]} is blocked; use unblock',
         }.get(t['status'], f'{t["id"]} is already {t["status"]}; use context {t["id"]} --role <role>'))
         require(all(x['status'] == 'done' for x in state['tasks'] if x['id'] in t['dependencies']), 'Dependencies incomplete')
+        if governance.bounded(config):
+            if t.get('task_class') == 'maintenance' and t.get('authorization') is None:
+                reference = config['governance']['maintenance_approval']
+                require(reference.strip().lower() != 'none', 'Maintenance requires an approved standing policy')
+                t['authorization'] = dict(objective=t['title'], criteria=t['criteria'], paths=t['paths'], outputs=[],
+                    permissions=dict(data_access=[], dependencies=[], external_activity=[]), approval_reference=reference)
+                artifact(t, 'prompts', encoded({'standing_maintenance_authorization': t['authorization']}) + '\n')
+            governance.require_authorized(sys.modules[__name__], t, config)
+            t.setdefault('starting_revision', governance.starting_revision(ROOT))
+            governance.check_changes(sys.modules[__name__], t, config)
         take_claim(t, state, config, args.ttl)
         t['status'] = 'building'
         if args.operation_id:
@@ -1241,7 +1344,28 @@ def dispatch(args):
         if 'pre' in t['analysis_phases'] and not analysis_gate(t, config, state, 'pre'):
             return 2
         assignment(t, 'builder', t['prompts'][0])
+    elif cmd == 'maintenance-finish':
+        require(governance.bounded(config) and t.get('task_class') == 'maintenance', 'Maintenance task required')
+        require(t['status'] == 'building', 'Maintenance must be building')
+        require(not t['analysis_phases'], 'Data-analysis tasks use standard review and inspection flow; reclassify first')
+        governance.check_changes(sys.modules[__name__], t, config)
+        payload = read(args.file)
+        require(isinstance(payload, dict) and set(payload) == {'changes', 'verification', 'verification_reason', 'handoff'},
+                'Use templates/maintenance.json')
+        require(all(text(payload[k]) for k in ('changes', 'verification_reason', 'handoff')), 'Explain changes, verification and handoff')
+        require(isinstance(payload['verification'], list) and all(strings(c) and c for c in payload['verification']),
+                'Verification must be argument arrays; [] requires a meaningful manual verification explanation')
+        t['source_files'] = []
+        t['snapshot'] = fingerprint(config, t)
+        results = run_checks(config | {'validation': config['validation'] | {'commands': payload['verification']}}) if payload['verification'] else []
+        require(all(r['exit_code'] == 0 for r in results) and fresh(t, config), 'Maintenance verification failed or changed sources')
+        t.update(test_pass=True, maintenance_complete=True, built_by=AGENT)
+        artifact(t, 'handoffs', encoded(envelope(t, target='coordinator', verification=payload, results=results)) + '\n')
+        validate_task(t, config, complete=True, live=True)
+        t.update(status='done', claim=None)
     elif cmd == 'handoff':
+        governance.check_changes(sys.modules[__name__], t, config)
+        require(t.get('task_class', 'standard') == 'standard', 'Maintenance uses maintenance-finish or reclassify to standard')
         h = handoff_payload(t, args); target = args.to
         require((t['status'], target) in (('building', 'reviewer'), ('reviewing', 'tester'), ('testing', 'coordinator')), 'Invalid handoff stage')
         if target == 'reviewer':
@@ -1296,6 +1420,7 @@ def dispatch(args):
         require(t['status'] == 'testing' and t['test_pass'], 'Passing tests required')
         artifact(t, 'memories', encoded(envelope(t, report=body(args.file))) + '\n')
     elif cmd == 'done':
+        governance.check_changes(sys.modules[__name__], t, config)
         require(t['status'] == 'testing', 'Task must be in testing')
         validate_task(t, config, complete=True, live=True)
         t['status'] = 'done'
@@ -1365,6 +1490,10 @@ def dispatch(args):
     elif cmd == 'log':
         artifact(t, 'prompts', body(args.file), 'md')
     save(state)
+    if cmd == 'maintenance-finish':
+        milestone('Maintenance completed: ' + t['title'], task=t['id'], rationale='Standing authorization and proportionate verification.', outcome='Task marked done.', evidence=[t['handoffs'][-1]])
+    if cmd == 'authorize':
+        milestone('Task authorization recorded: ' + t['title'], task=t['id'], rationale='Operator asserted explicit approval of the recorded boundary.', outcome='Approved boundary recorded; affected evidence invalidated.', evidence=[t['prompts'][-1]])
     if cmd in ('cancel', 'reopen'):
         milestone(('Task cancelled: ' if cmd == 'cancel' else 'Task reopened: ') + t['title'], task=t['id'],
                   rationale='The user asked for this; their reason is in the task prompts.',

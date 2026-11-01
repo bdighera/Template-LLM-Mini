@@ -1,0 +1,5 @@
+{
+  "scripts/tests": 130,
+  "addons/data_analysis/tests": 44,
+  "addons/agent_coordination/tests": 15
+}

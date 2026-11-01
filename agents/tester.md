@@ -44,3 +44,13 @@ with their approved environment. It requires dependencies, a current generated
 schema, and a nonempty suite without skipped tests. The component-presence check
 only permits removal recorded by approved workflow pruning; dependency-free
 self-test skips alone do not demonstrate coordination coverage.
+
+For bounded governance, read docs/governance.md and the authorization and actual
+change manifest in task context. Registration and claims are not approval. Work
+within the approved boundary; escalate material expansions, not covered choices.
+Check that meaningful changes support criteria or have an explained supporting
+purpose. Treat enforcement coverage honestly, including unknown hook operation.
+For synthetic tests, use exact dataset IDs/versions and isolated runs as described
+in docs/synthetic-data.md; retain hashes, provenance and sensitivity restrictions.
+Approved maintenance uses its compact completion path; growing or uncertain work
+is standard and needs explicit authorization and independent review.

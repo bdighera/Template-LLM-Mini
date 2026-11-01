@@ -86,6 +86,30 @@ def edit_decision(path, agent, role=None, content=''):
         return 'ask', f'New file in {RAW}/: staging external data needs explicit user approval.'
     config, state = project()
     if config:
+        import governance
+        synthetic_root = config.get('synthetic', {}).get('root')
+        if synthetic_root and under(rel, synthetic_root + '/datasets'):
+            return 'deny', 'Published synthetic datasets are immutable; use synthetic-publish for a new version.'
+        if synthetic_root and under(rel, synthetic_root + '/runs'):
+            parts = rel[len(synthetic_root) + 1:].split('/')
+            if len(parts) >= 2:
+                manifest_path = wf.local(synthetic_root + '/runs/' + parts[1] + '/manifest.json')
+                if not manifest_path.exists():
+                    return 'deny', 'Create an owned synthetic run through synthetic-run before writing outputs.'
+                if manifest_path.exists():
+                    record = wf.read(manifest_path)
+                    if record.get('state') == 'sealed':
+                        return 'deny', 'Sealed synthetic runs are immutable; create a new run.'
+                    owner = next((t for t in state['tasks'] if t['id'] == record.get('task')), None)
+                    claim = coord.live_claim(owner) if owner else None
+                    if not claim or claim['agent'] != agent or owner['status'] != 'building':
+                        return 'deny', 'Synthetic run edits require the owning building task and your own live claim.'
+                    try:
+                        governance.require_authorized(wf, owner, config)
+                    except ValueError as exc:
+                        return 'deny', str(exc)
+            if len(parts) == 3 and parts[2].casefold() == 'manifest.json':
+                return 'deny', 'Synthetic manifests change only through lifecycle commands.'
         if role:
             definitions = roles.configured(wf.ROOT, config)
             if role in definitions:
@@ -93,12 +117,19 @@ def edit_decision(path, agent, role=None, content=''):
                 explicit = [pattern for pattern in writes if pattern != 'task']
                 if 'task' not in writes and not coord.covers(explicit, rel):
                     return 'deny', f'The {role} role may not write {rel} (writes: {writes}); return findings to the coordinator.'
-        if wf.in_sources(config, rel):
+        if wf.in_sources(config, rel) or (governance.bounded(config) and wf.source_allowed(rel)):
             holders = [t for t in state['tasks'] if coord.live_claim(t) and coord.covers(t['paths'], rel)]
             foreign = [t for t in holders if t['claim']['agent'] != agent]
             if foreign:
                 t = foreign[0]
                 return 'deny', f'{rel} is inside {t["id"]} paths, claimed by {t["claim"]["agent"]} until {t["claim"]["expires"]}.'
+            for holder in holders:
+                if governance.bounded(config):
+                    try:
+                        governance.require_authorized(wf, holder, config)
+                        wf.require(holder.get('starting_revision') and holder['status'] in ('building', 'testing'), 'Start the authorized task before editing; rebuild reviewed work before repairs')
+                    except ValueError as exc:
+                        return 'deny', str(exc)
             if not holders:
                 return 'deny', (f'{rel} is project source but {agent} holds no live claim covering it. '
                                 'Register it (`workflow.py add ... --path GLOB`, then `start`), or `claim`/`scope` an existing task.')

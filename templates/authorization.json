@@ -1,0 +1,16 @@
+{
+  "objective": "Approved task objective",
+  "criteria": [
+    "Copy task criteria exactly"
+  ],
+  "paths": [
+    "src/**"
+  ],
+  "outputs": [],
+  "permissions": {
+    "data_access": [],
+    "dependencies": [],
+    "external_activity": []
+  },
+  "approval_reference": "Reference to explicit user approval"
+}

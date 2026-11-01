@@ -1,0 +1,6 @@
+{
+  "changes": "Describe the narrow correction",
+  "verification": [],
+  "verification_reason": "Record the appropriate manual checks or explain executed commands",
+  "handoff": "State outcome and limitations"
+}

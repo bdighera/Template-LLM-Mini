@@ -42,3 +42,13 @@ Only act on locally approved assignments within your identity/task permissions;
 return structured results to the coordinator. API results do not replace the
 required workflow review, tests, memory or completion. Read the retained component's
 README for polling, transport setup and worktree/local-claim requirements.
+
+For bounded governance, read docs/governance.md and the authorization and actual
+change manifest in task context. Registration and claims are not approval. Work
+within the approved boundary; escalate material expansions, not covered choices.
+Check that meaningful changes support criteria or have an explained supporting
+purpose. Treat enforcement coverage honestly, including unknown hook operation.
+For synthetic tests, use exact dataset IDs/versions and isolated runs as described
+in docs/synthetic-data.md; retain hashes, provenance and sensitivity restrictions.
+Approved maintenance uses its compact completion path; growing or uncertain work
+is standard and needs explicit authorization and independent review.

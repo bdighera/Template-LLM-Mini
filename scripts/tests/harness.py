@@ -16,12 +16,13 @@ needs_data_addon = unittest.skipUnless(DATA_ADDON, 'data-analysis add-on pruned'
 
 def harness_files(source):
     """Harness source only, never adopted state, datasets, or environments."""
-    names = ['.gitignore', '.gitattributes', 'AGENTS.md', 'CLAUDE.md', 'README.md', 'CONFIGURE.md', 'docs/workflow.md',
+    names = ['.gitignore', '.gitattributes', 'AGENTS.md', 'CLAUDE.md', 'README.md', 'CONFIGURE.md', 'docs/workflow.md', 'docs/governance.md', 'docs/synthetic-data.md', 'NORTH_STAR.md',
              'prompts/template_prompt_initialization.md', '.claude/settings.json', 'tests/.gitkeep']
     for folder in ('scripts', 'templates', 'agents', 'addons', 'githooks'):
         for directory, dirs, files in os.walk(source / folder):
             dirs[:] = [d for d in dirs if d not in {'.venv', 'venv', '__pycache__', '.pytest_cache'}]
             names += [(Path(directory) / name).relative_to(source).as_posix() for name in files]
+    names += ['data/synthetic/datasets/.gitkeep', 'data/synthetic/runs/.gitkeep']
     names += [f'data/{folder}/.gitkeep' for folder in ('raw', 'processed', 'generated')]
     return [name for name in names if (source / name).is_file()]
 
@@ -39,6 +40,8 @@ class HarnessTestCase(unittest.TestCase):
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(SOURCE / name, destination)
         c = json.loads((self.root / 'templates/config.json').read_text())
+        c.pop('governance', None)  # Legacy suite exercises backward compatibility.
+        c.pop('synthetic', None)
         c['project'] = dict(name='Sample', purpose='Example', users='Developer',
                             scope='One feature', exclusions='Deployment', acceptance_criteria=['Works'])
         c['technology'] = 'Python'
