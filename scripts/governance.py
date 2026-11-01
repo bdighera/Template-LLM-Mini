@@ -47,13 +47,16 @@ def validate_authorization(wf, task, payload):
     require(wf.strings(payload['paths']) and payload['paths'], 'Authorization paths required')
     for p in payload['paths']:
         require(wf.coord.normalize_pattern(p) == p and wf.source_allowed(p), 'Authorization paths must be canonical source patterns')
-        wf.local(p)
+        # Only the static prefix touches the filesystem; Windows rejects '*' in path lookups.
+        static = Path(p).parts[:next((i for i, part in enumerate(Path(p).parts) if any(c in part for c in '*?[]')), None)]
+        if static:
+            wf.local(Path(*static).as_posix())
     require(contained(payload['paths'], task['paths']), 'Task paths exceed authorization; amend authorization first')
     require(wf.strings(payload['outputs']), 'Authorization outputs must be a list')
     for ref in payload['outputs']:
+        require(not any(c in ref for c in '*?[]'), 'Output locations must be exact paths without globs')
         wf.local(ref)
         require(Path(ref).as_posix() == ref, 'Output locations must be canonical paths')
-        require(not any(c in ref for c in '*?[]'), 'Output locations must be exact paths without globs')
         require(Path(ref).parts[0] == 'data' and len(Path(ref).parts) > 1 and not (ref.casefold() == 'data/raw' or ref.casefold().startswith('data/raw/')),
                 'Outputs must be under data/ outside read-only raw/')
     permissions = payload['permissions']
