@@ -1280,14 +1280,12 @@ def dispatch(args):
         governance.validate_authorization(sys.modules[__name__], t | {'criteria': payload['criteria']} if t.get('authorization') else t, payload)
         previous = t.get('authorization')
         if previous != payload:
-            if t['status'] not in ('planned', 'blocked'):
-                invalidate(t, config)
-            elif t['snapshot']:
+            if t['status'] not in ('planned', 'blocked') or t['snapshot']:
                 invalidate(t, config)
             t['authorization'] = payload
             t['criteria'] = payload['criteria']
-            if t['status'] != 'planned' and not t.get('starting_revision'):
-                t['starting_revision'] = governance.starting_revision(ROOT)
+            if t['status'] != 'planned':
+                governance.begin(sys.modules[__name__], t)
             t.pop('maintenance_complete', None)
             artifact(t, 'prompts', encoded({'authorization': payload, 'previous': previous}) + '\n')
     elif cmd == 'classify':
@@ -1335,7 +1333,7 @@ def dispatch(args):
                     permissions=dict(data_access=[], dependencies=[], external_activity=[]), approval_reference=reference)
                 artifact(t, 'prompts', encoded({'standing_maintenance_authorization': t['authorization']}) + '\n')
             governance.require_authorized(sys.modules[__name__], t, config)
-            t.setdefault('starting_revision', governance.starting_revision(ROOT))
+            governance.begin(sys.modules[__name__], t)
             governance.check_changes(sys.modules[__name__], t, config)
         take_claim(t, state, config, args.ttl)
         t['status'] = 'building'
@@ -1362,7 +1360,7 @@ def dispatch(args):
         t.update(test_pass=True, maintenance_complete=True, built_by=AGENT)
         artifact(t, 'handoffs', encoded(envelope(t, target='coordinator', verification=payload, results=results)) + '\n')
         validate_task(t, config, complete=True, live=True)
-        t.update(status='done', claim=None)
+        t.update(status='done', claim=None, finished_at=coord.now().isoformat())
     elif cmd == 'handoff':
         governance.check_changes(sys.modules[__name__], t, config)
         require(t.get('task_class', 'standard') == 'standard', 'Maintenance uses maintenance-finish or reclassify to standard')
@@ -1423,7 +1421,7 @@ def dispatch(args):
         governance.check_changes(sys.modules[__name__], t, config)
         require(t['status'] == 'testing', 'Task must be in testing')
         validate_task(t, config, complete=True, live=True)
-        t['status'] = 'done'
+        t.update(status='done', finished_at=coord.now().isoformat())
         t['claim'] = None
     elif cmd == 'profile':
         require(t['status'] in ('building', 'analyzing', 'awaiting-data', 'reviewing', 'testing'), 'Start task before profiling')

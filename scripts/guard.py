@@ -35,7 +35,7 @@ WRITE_COMMANDS = re.compile(r'\b(rm|mv|cp|tee|truncate|dd|ln|chmod|unlink|shred)
                             r'|Out-File|ri|rni|ni|del|erase|rd|rmdir|ren|move|copy)\b|\[(System\.)?IO\.File\]::)')
 REDIRECT = re.compile(r'>{1,2}\s*([^\s;&|<>]+)')
 DOWNLOAD = re.compile(r'\b(curl|wget|aria2c)\b|(?i:\b(Invoke-WebRequest|iwr|Invoke-RestMethod|irm|Start-BitsTransfer)\b)')
-USER_ONLY = re.compile(r'\bworkflow\.(py|sh)\b[^;&|]*\s(cancel|reopen)\b')
+USER_ONLY = re.compile(r'\bworkflow\.(py|sh)\b[^;&|]*\s((cancel|reopen|authorize)\b|synthetic-clean\b[^;&|]*--approved\b)')
 HOOK_BYPASS = re.compile(r'\bgit\b[^;&|]*\bcommit\b[^;&|]*(--no-verify|\s-[a-zA-Z]*n\b)|(?i:core\.hooksPath)')  # Git config keys are case-insensitive.
 
 
@@ -87,6 +87,7 @@ def edit_decision(path, agent, role=None, content=''):
     config, state = project()
     if config:
         import governance
+        import synthetic
         synthetic_root = config.get('synthetic', {}).get('root')
         if synthetic_root and under(rel, synthetic_root + '/datasets'):
             return 'deny', 'Published synthetic datasets are immutable; use synthetic-publish for a new version.'
@@ -96,18 +97,18 @@ def edit_decision(path, agent, role=None, content=''):
                 manifest_path = wf.local(synthetic_root + '/runs/' + parts[1] + '/manifest.json')
                 if not manifest_path.exists():
                     return 'deny', 'Create an owned synthetic run through synthetic-run before writing outputs.'
-                if manifest_path.exists():
-                    record = wf.read(manifest_path)
-                    if record.get('state') == 'sealed':
-                        return 'deny', 'Sealed synthetic runs are immutable; create a new run.'
-                    owner = next((t for t in state['tasks'] if t['id'] == record.get('task')), None)
-                    claim = coord.live_claim(owner) if owner else None
-                    if not claim or claim['agent'] != agent or owner['status'] != 'building':
-                        return 'deny', 'Synthetic run edits require the owning building task and your own live claim.'
-                    try:
-                        governance.require_authorized(wf, owner, config)
-                    except ValueError as exc:
-                        return 'deny', str(exc)
+                record = wf.read(manifest_path)
+                if record.get('state') == 'sealed':
+                    return 'deny', 'Sealed synthetic runs are immutable; create a new run.'
+                owner = next((t for t in state['tasks'] if t['id'] == record.get('task')), None)
+                claim = coord.live_claim(owner) if owner else None
+                if not claim or claim['agent'] != agent or owner['status'] != 'building':
+                    return 'deny', 'Synthetic run edits require the owning building task and your own live claim.'
+                try:
+                    governance.require_authorized(wf, owner, config)
+                    synthetic.permitted(wf, config, owner, manifest_path.parent)
+                except ValueError as exc:
+                    return 'deny', str(exc)
             if len(parts) == 3 and parts[2].casefold() == 'manifest.json':
                 return 'deny', 'Synthetic manifests change only through lifecycle commands.'
         if role:
@@ -142,16 +143,21 @@ def edit_decision(path, agent, role=None, content=''):
 def bash_decision(command, agent):
     if HOOK_BYPASS.search(command):
         return 'deny', 'Do not bypass or repoint commit hooks; ask the user if a hook blocks you.'
+    readonly = (RAW,)
+    if 'datasets' in command.casefold():  # Read config only when a published synthetic dataset could be the target.
+        synthetic_root = (project()[0] or {}).get('synthetic', {}).get('root')
+        readonly += (synthetic_root + '/datasets',) if synthetic_root else ()
     targets = [relative(target) for target in REDIRECT.findall(command)]
-    writes = [t for t in targets if t and (protected(t) or under(t, RAW))]
+    writes = [t for t in targets if t and (protected(t) or any(under(t, r) for r in readonly))]
     if WRITE_COMMANDS.search(command):
         normalized = command.replace('\\', '/').casefold()  # data\raw and DATA/raw are data/raw on Windows.
-        writes += [prefix for prefix in PROTECTED + (RAW,) if prefix.casefold() in normalized]
+        writes += [prefix for prefix in PROTECTED + readonly if prefix.casefold() in normalized]
     if writes:
         return 'deny', (f'Command would modify {", ".join(sorted(set(writes)))}: workflow files change only through '
-                        'scripts/workflow.py and data/raw/ is read-only.')
+                        'scripts/workflow.py; data/raw/ and published synthetic datasets are read-only.')
     if USER_ONLY.search(command):
-        return 'ask', 'Only the user cancels or reopens a task; proceed only if the user asked for exactly this.'
+        return 'ask', ('Only the user authorizes, cancels or reopens a task, or approves synthetic cleanup; '
+                       'proceed only if the user asked for exactly this.')
     if DOWNLOAD.search(command):
         return 'ask', ('Downloads need explicit user approval; prefer a registered source and '
                        '`workflow.py fetch` (data add-on), and stage external evidence under data/ only.')

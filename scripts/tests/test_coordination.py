@@ -200,6 +200,10 @@ class GuardTests(HarnessTestCase):
         self.assertEqual(self.bash('git commit --no-verify -m x', code=2)['decision'], 'deny')
         self.assertEqual(self.bash('git -c core.hookspath=/dev/null commit -m x', code=2)['decision'], 'deny')
         self.assertEqual(self.bash('cat TASKS.md .workflow/state.json')['decision'], 'allow')
+        for command in ('python3 scripts/workflow.py authorize T001 --file a.json --approved',
+                        'python3 scripts/workflow.py synthetic-clean T001 --run r1 --approved'):
+            self.assertEqual(self.bash(command, code=2)['decision'], 'ask', command)
+        self.assertEqual(self.bash('python3 scripts/workflow.py synthetic-clean T001 --run r1')['decision'], 'allow')
         self.assertEqual(self.bash('python3 scripts/workflow.py status 2>&1')['decision'], 'allow')
         for command in ('python3 scripts/workflow.py cancel T001 --file r.md --approved',
                         'sh scripts/workflow.sh reopen T001 --file r.md --approved'):

@@ -1,4 +1,5 @@
 """Bounded authorization and Git change evidence; attribution is not authentication."""
+from datetime import datetime
 import hashlib
 import json
 import subprocess
@@ -72,8 +73,8 @@ def require_authorized(wf, task, config):
             'Maintenance requires an approved standing policy')
 
 
-def git(root, *args):
-    result = subprocess.run(['git', *args], cwd=root, capture_output=True)
+def git(root, *args, input=None):
+    result = subprocess.run(['git', *args], cwd=root, capture_output=True, input=input)
     require(result.returncode == 0, 'Git change evidence unavailable: a committed Git baseline is required')
     return result.stdout
 
@@ -82,38 +83,87 @@ def starting_revision(root):
     return git(root, 'rev-parse', '--verify', 'HEAD').decode().strip()
 
 
+def names(output):
+    return [n.decode('utf-8') for n in output.split(b'\0') if n]
+
+
+def tree(wf, revision):
+    oids, modes = {}, {}
+    for entry in names(git(wf.ROOT, 'ls-tree', '-rz', '--full-tree', revision)):
+        header, name = entry.split('\t', 1)
+        mode, kind, oid = header.split()
+        if wf.source_allowed(name):
+            require(kind == 'blob' and mode != '120000', 'Source symlinks/submodules are unsupported')
+            oids[name], modes[name] = oid, mode
+    return oids, modes
+
+
+def worktree(wf, revision):
+    """Current oid/mode of source paths Git reports as differing from revision (one hash-object call)."""
+    candidates = set(names(git(wf.ROOT, 'diff', '--name-only', '--no-renames', '-z', revision)))
+    candidates |= set(names(git(wf.ROOT, 'ls-files', '--others', '--exclude-standard', '-z')))
+    candidates = sorted(n for n in candidates if wf.source_allowed(n))
+    present = [n for n in candidates if wf.local(n).is_file()]
+    oids = git(wf.ROOT, 'hash-object', '--stdin-paths', input=''.join(n + '\n' for n in present).encode()).decode().split()
+    current = dict.fromkeys(candidates, (None, None))
+    for name, oid in zip(present, oids):
+        current[name] = (oid, '100755' if wf.local(name).stat().st_mode & stat.S_IXUSR else '100644')
+    return current
+
+
+def other_tasks(wf, task):
+    state = wf.read(wf.ROOT / '.workflow/state.json')
+    return [t for t in state['tasks'] if t['id'] != task['id'] and t['status'] != 'cancelled']
+
+
+def owner(wf, task, others, name):
+    """Another task accounts for a change if it is unfinished, or finished after this task started."""
+    started = task.get('started_at')
+    for other in others:
+        finished = other.get('finished_at')
+        if other['status'] == 'done' and not (started and finished and datetime.fromisoformat(finished) >= datetime.fromisoformat(started)):
+            continue
+        if wf.coord.covers(other['paths'], name):
+            return other['id']
+    return None
+
+
+def begin(wf, task):
+    """Record the starting point. Pending changes inside other (non-cancelled) tasks' paths become the baseline."""
+    if task.get('starting_revision'):
+        return
+    revision = starting_revision(wf.ROOT)
+    others = other_tasks(wf, task)
+    task.update(starting_revision=revision, started_at=wf.coord.now().isoformat(), starting_baseline={
+        name: list(value) for name, value in worktree(wf, revision).items()
+        if any(wf.coord.covers(t['paths'], name) for t in others)})
+
+
 def manifest(wf, task):
     revision = task.get('starting_revision')
     require(revision, 'No starting revision; start the task before requesting change evidence')
-    before = {}
-    before_modes = {}
+    committed, committed_modes = tree(wf, revision)
+    before, before_modes = dict(committed), dict(committed_modes)
+    current = worktree(wf, revision)
+    for name, (oid, mode) in task.get('starting_baseline', {}).items():
+        before[name], before_modes[name] = oid, mode
+        current.setdefault(name, (committed.get(name), committed_modes.get(name)))  # Now matches revision again.
     check_modes = git(wf.ROOT, 'config', '--get', '--default', 'true', 'core.filemode').strip() == b'true'
-    for entry in git(wf.ROOT, 'ls-tree', '-rz', '--full-tree', revision).split(b'\0'):
-        if not entry:
-            continue
-        header, raw_name = entry.split(b'\t', 1)
-        mode, kind, oid = header.decode().split()
-        name = raw_name.decode('utf-8')
-        if wf.source_allowed(name):
-            require(kind == 'blob' and mode != '120000', 'Source symlinks/submodules are unsupported')
-            before[name] = oid
-            before_modes[name] = mode
-    names = set(before) | {n.decode('utf-8') for n in git(wf.ROOT, 'ls-files', '--cached', '--others', '--exclude-standard', '-z').split(b'\0') if n}
-    changes = []
-    for name in sorted(names):
-        if not wf.source_allowed(name):
-            continue
-        path = wf.local(name)
-        current = git(wf.ROOT, 'hash-object', '--', name).decode().strip() if path.is_file() else None
+    others = other_tasks(wf, task)
+    changes, attributed = [], {}
+    for name in sorted(current):
+        oid, mode = current[name]
         old = before.get(name)
-        mode = ('100755' if path.stat().st_mode & stat.S_IXUSR else '100644') if path.is_file() else None
-        mode_changed = check_modes and mode != before_modes.get(name)
-        if current != old or mode_changed:
-            changes.append({'path': name, 'status': 'added' if old is None else 'deleted' if current is None else 'modified',
-                            'before': old, 'after': current,
-                            'before_mode': before_modes.get(name) if check_modes else None, 'after_mode': mode if check_modes else None,
-                            'in_scope': wf.coord.covers(task['paths'], name)})
-    return {'starting_revision': revision, 'changes': changes,
+        if oid == old and not (check_modes and mode != before_modes.get(name)):
+            continue
+        if not wf.coord.covers(task['paths'], name) and (holder := owner(wf, task, others, name)):
+            attributed[name] = holder
+            continue
+        changes.append({'path': name, 'status': 'added' if old is None else 'deleted' if oid is None else 'modified',
+                        'before': old, 'after': oid,
+                        'before_mode': before_modes.get(name) if check_modes else None, 'after_mode': mode if check_modes else None,
+                        'in_scope': wf.coord.covers(task['paths'], name)})
+    return {'starting_revision': revision, 'changes': changes, 'attributed': attributed,
             'outside_scope': [c['path'] for c in changes if not c['in_scope']]}
 
 
@@ -139,6 +189,8 @@ def check_changes(wf, task, config):
     require_authorized(wf, task, config)
     result = manifest(wf, task)
     require(not result['outside_scope'], 'Changes outside approved task paths: ' + ', '.join(result['outside_scope']))
+    # Other tasks' changes stay out of this task's evidence so their edits never stale it.
+    result.pop('attributed')
     return result
 
 

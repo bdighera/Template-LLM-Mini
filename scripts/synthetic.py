@@ -193,7 +193,6 @@ def dispatch(wf, args, config, state):
         standing = config['synthetic']['disposable_cleanup_approval']
         require(args.approved or (record['disposable'] and standing.strip().lower() != 'none'),
                 'Deletion requires --approved or an approved disposable-run cleanup policy')
-        require(record['disposable'] or args.approved, 'Retained run deletion requires separate approval')
         # Durable receipt preserves lineage before removing explicitly selected run data.
         wf.artifact(task, 'prompts', wf.encoded({'synthetic_cleanup': args.run, 'manifest': record,
             'approval_reference': 'explicit --approved assertion' if args.approved else standing}) + '\n')

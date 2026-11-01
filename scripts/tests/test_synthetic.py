@@ -128,3 +128,10 @@ class SyntheticTests(HarnessTestCase):
         self.run_cli('guard', 'edit', '--path', f'{self.data_root}/runs/missing/outputs/records.json', success=False)
         self.output(); self.run_cli('synthetic-seal', 'T001', '--run', 'run1')
         self.run_cli('guard', 'edit', '--path', f'{self.data_root}/runs/run1/outputs/records.json', success=False)
+
+    def test_shell_writes_to_published_datasets_are_denied(self):
+        self.prepare()
+        for command in ('cp x.csv data/synthetic/datasets/d1/v1/x.csv', 'echo x > data/synthetic/datasets/d1/v1/x.csv'):
+            result = json.loads(self.run_cli('guard', 'bash', '--command', command, code=2).stdout)
+            self.assertEqual(result['decision'], 'deny', command)
+        self.assertEqual(json.loads(self.run_cli('guard', 'bash', '--command', 'cp x.csv data/synthetic/runs/r1/outputs/').stdout)['decision'], 'allow')

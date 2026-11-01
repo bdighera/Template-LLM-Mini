@@ -22,10 +22,59 @@ class GovernanceTests(HarnessTestCase):
         args = tuple(str(Path(self.temp.name) / a) if a in ('authorization.json', 'maintenance.json', 'review.md') else a for a in args)
         return super().run_cli(*args, **kwargs)
 
-    def authorize(self, paths=None, outputs=None, reference='User approved task plan'):
+    def authorize(self, paths=None, outputs=None, reference='User approved task plan', task='T001'):
         self.put('authorization.json', dict(objective='Example', criteria=['Works'], paths=paths or ['example.py'],
             outputs=outputs or [], permissions=dict(data_access=[], dependencies=[], external_activity=[]), approval_reference=reference))
-        return self.run_cli('authorize', 'T001', '--file', 'authorization.json', '--approved')
+        return self.run_cli('authorize', task, '--file', 'authorization.json', '--approved')
+
+    def complete(self, task, agent):
+        self.handoff('reviewer', task=task, agent=agent); self.review(task=task, agent=agent); self.handoff('tester', task=task, agent=agent)
+        self.run_cli('test', task, agent=agent); self.run_cli('memory', task, '--file', 'memory.md', agent=agent)
+        self.handoff('coordinator', task=task, agent=agent); self.run_cli('done', task, agent=agent)
+
+    def two_tasks(self):
+        self.setup_bounded()
+        self.add(agent='claude'); self.authorize()
+        self.add(paths=('other.py',), agent='codex'); self.authorize(paths=['other.py'], task='T002')
+        self.run_cli('start', 'T001', agent='claude')
+        self.put('example.py', 'assert 3 + 3 == 6\n')
+        self.run_cli('start', 'T002', agent='codex')  # T001's pending edit is accounted for.
+        self.put('other.py', 'assert 1 + 1 == 2\n')
+
+    def test_parallel_tasks_in_one_worktree_complete_independently(self):
+        self.two_tasks()
+        changes = json.loads(self.run_cli('changes', 'T001').stdout)
+        self.assertEqual(changes['attributed'], {'other.py': 'T002'})
+        self.assertEqual(changes['outside_scope'], [])
+        self.assertIn('example.py', self.task(1)['starting_baseline'])
+        self.complete('T001', 'claude')
+        self.git('add', 'example.py'); self.git('commit', '-qm', 'T001')  # HEAD moves under T002.
+        self.complete('T002', 'codex')
+        self.assertEqual([t['status'] for t in self.state()['tasks']], ['done', 'done'])
+
+    def test_peer_edits_do_not_stale_evidence_but_unowned_changes_block(self):
+        self.two_tasks()
+        self.handoff('reviewer', task='T001', agent='claude')
+        snapshot = self.task(0)['snapshot']['hash']
+        self.put('other.py', 'assert 2 + 2 == 4\n')
+        self.review(task='T001', agent='claude')  # Requires fresh evidence despite T002's edit.
+        self.assertEqual(self.task(0)['snapshot']['hash'], snapshot)
+        self.put('stray.py', 'x = 1\n')
+        self.assertEqual(json.loads(self.run_cli('changes', 'T002').stdout)['outside_scope'], ['stray.py'])
+        self.assertIn('outside approved', self.run_cli('handoff', 'T002', '--to', 'reviewer', '--file', 'handoff.json',
+                                                      agent='codex', success=False).stderr)
+
+    def test_unowned_pending_changes_block_start(self):
+        self.setup_bounded(); self.add(); self.authorize()
+        self.put('stray.py', 'x = 1\n')
+        self.assertIn('outside approved', self.run_cli('start', 'T001', success=False).stderr)
+
+    def test_shell_write_into_peer_scope_stales_peer_evidence(self):
+        self.two_tasks()
+        self.handoff('reviewer', task='T002', agent='codex')
+        self.put('other.py', 'assert 5 == 5\n')  # Unintercepted write by another agent.
+        self.assertEqual(json.loads(self.run_cli('changes', 'T001').stdout)['attributed'], {'other.py': 'T002'})
+        self.review(task='T002', agent='codex', success=False)
 
     def test_registration_and_claim_are_not_approval(self):
         self.setup_bounded(); self.add()

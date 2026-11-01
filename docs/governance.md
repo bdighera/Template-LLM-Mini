@@ -17,6 +17,9 @@ python3 scripts/workflow.py start T001
 python3 scripts/workflow.py changes T001
 ```
 
+The guard asks the user before an agent runs `authorize`, or `synthetic-clean`
+with `--approved`; `--approved` alone is an assertion, not proof of approval.
+
 Fill the objective, exact task criteria, canonical source path patterns, declared
 output locations under data/ outside raw/, permitted data access, dependencies,
 external activity, and a concrete approval reference. Empty permission lists mean
@@ -44,9 +47,18 @@ A bounded task needs a committed Git HEAD. After configuration, review and commi
 the configured project baseline before the first task; otherwise setup changes
 will correctly appear in the task diff. Its start records that revision; the
 change manifest compares current tracked and untracked source files with that
-revision, including additions and deletions. Pre-existing changes count too.
-Source changes outside task paths block start, reviewer handoff, and completion.
-Use a clean dedicated worktree or include legitimately approved existing changes.
+revision, including additions and deletions.
+
+Several agents may run bounded tasks in one worktree. At start, pending changes
+inside another non-cancelled task's paths become this task's baseline; any other
+pending source change blocks start. Afterwards, a change outside this task's
+paths is `attributed` to another task when it falls in the paths of a task that
+is unfinished or finished after this one started (so a peer committing its work
+mid-flight is fine). Attributed changes are excluded from this task's evidence,
+so peers' edits never stale it. Changes no task accounts for block start,
+reviewer handoff, and completion. A shell write into a peer's paths is credited
+to that peer and stales its evidence, so the peer must re-verify before
+completing; the write is detected, not prevented.
 Ignored untracked files are not discovered by Git enumeration. Paths excluded as
 data, workflow artifacts, environments and caches remain outside source evidence.
 
@@ -97,7 +109,6 @@ manually-invoked, policy-only or unknown. Hook configuration does not prove an
 active editing integration. Guard edit must be invoked before writes when hooks
 are unavailable. Shell source writes are not claim-intercepted. Completion checks
 detect changes after editing; these controls are not an OS sandbox or an
-authenticated access-control system. Claims do not coordinate across worktrees;
-parallel editors still need separate worktrees, branches and coordinator scope
-assignments. Retention and external sharing need actual operating controls where
+authenticated access-control system. Claims coordinate agents within one
+worktree; they do not coordinate across worktrees. Retention and external sharing need actual operating controls where
 required by the project's data classification.
