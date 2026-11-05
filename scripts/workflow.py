@@ -34,6 +34,7 @@ KINDS = ('prompts', 'handoffs', 'reviews', 'tests', 'memories', 'checkpoints', '
 EXCLUDED = {'.git', '.venv', 'venv', '__pycache__', '.pytest_cache', '.mypy_cache',
             '.ruff_cache', 'node_modules'}
 ROOT_EXCLUDED = {'data', '.workflow', 'handoffs', 'memories', 'logging', 'dist', 'build'}
+MAX_RELATED_MEMORIES = 5
 # Template components a project may delete once its use case is known (config.prune).
 PRUNABLE = {
     'agent_coordination': ['addons/agent_coordination'],
@@ -448,7 +449,7 @@ def save(state):
         latest = [f'{kind}: [{Path(task[kind][-1]).name}]({task[kind][-1]})' for kind in KINDS if task.get(kind)]
         lines += ['', 'Latest evidence: ' + ('; '.join(latest) or 'none')]
     write(ROOT / 'TASKS.md', '\n'.join(lines) + '\n')
-    entries = ['# Feature memories', '', 'Generated; load only relevant entries (`workflow.py recall "<words>"` ranks them).', '']
+    entries = ['# Feature memories', '', 'Generated; load only relevant entries (`workflow.py recall "<words>"` ranks them with journal decisions).', '']
     for task in state['tasks']:
         for ref in task['memories']:
             entries.append(f'- {task["id"]} {task["title"]}: [{Path(ref).name}](../{ref})')
@@ -458,18 +459,52 @@ def save(state):
 
 
 def recall(state, query, limit):
-    """Feature memories ranked by how often they use the query's words; title matches count double."""
+    """Feature memories and journal decisions ranked by query-word use; titles and decision text count double.
+
+    Outdated results are flagged at read time because completed records are immutable.
+    """
     words = set(re.findall(r'\w+', query.lower()))
     require(words and limit > 0, 'recall needs query words and a positive --limit')
+    matches = lambda value: sum(w in words for w in re.findall(r'\w+', value.lower()))
+    try:
+        entries = decision_journal.load(ROOT)
+    except (ValueError, OSError, TypeError, KeyError) as exc:  # Memories stay searchable while the journal awaits repair.
+        print(f'Warning: journal not searched: {exc}', file=sys.stderr)
+        entries = []
+    superseded = decision_journal.superseded_by(entries)
     hits = []
     for task in state['tasks']:
-        title = sum(w in words for w in re.findall(r'\w+', task['title'].lower()))
+        title = matches(task['title'])
         for ref in task['memories']:
             report = read(local(ref)).get('report', '')
-            score = 2 * title + sum(w in words for w in re.findall(r'\w+', report.lower()))
+            score = 2 * title + matches(report)
             if score:
-                hits.append(dict(task=task['id'], title=task['title'], memory=ref, score=score))
-    return sorted(hits, key=lambda hit: -hit['score'])[:limit]  # ponytail: keyword scan of every memory; index it if this gets slow
+                hit = dict(kind='memory', task=task['id'], title=task['title'], memory=ref, score=score)
+                stale = [dict(id=item, superseded_by=superseded[item]) for item in decision_journal.cited_ids(report) if item in superseded]
+                if stale:
+                    hit['cites_superseded'] = stale
+                hits.append(hit)
+    for entry in entries:
+        if entry['type'] != 'decision':
+            continue  # Automatic milestones would crowd out real decisions.
+        score = 2 * matches(entry['decision']) + matches(entry['rationale']) + matches(entry['outcome'])
+        if score:
+            hit = dict(kind='decision', id=entry['id'], task=entry['task'], status=entry['status'],
+                       decision=decision_journal.clip(entry['decision']), score=score)
+            if entry['id'] in superseded:
+                hit['superseded_by'] = superseded[entry['id']]
+            hits.append(hit)
+    # Among equal scores, current records come first.
+    ranked = sorted(hits, key=lambda hit: (-hit['score'], bool(hit.get('superseded_by') or hit.get('cites_superseded'))))
+    return ranked[:limit]  # ponytail: keyword scan of every memory; index it if this gets slow
+
+
+def related_memories(task, state):
+    """Latest memory paths from directly linked tasks, newest task first; (kept, dropped count)."""
+    linked = set(task['dependencies']) | ({task['follows']} if task.get('follows') else set())
+    found = [dict(task=other['id'], memory=other['memories'][-1]) for other in reversed(state['tasks'])
+             if other['id'] in linked and other['memories']]
+    return found[:MAX_RELATED_MEMORIES], max(0, len(found) - MAX_RELATED_MEMORIES)
 
 
 def envelope(task, **values):
@@ -498,7 +533,7 @@ def handoff_payload(task, args):
     if args.to == 'coordinator' and task['memories'] and isinstance(h.get('memories'), list):
         if task['memories'][-1] not in h['memories']:
             h['memories'] = h['memories'] + [task['memories'][-1]]
-    return validate_handoff(h)
+    return validate_handoff(h, '' if args.file else f' Fields were reused from {task["handoffs"][-1]}; override with --set.')
 
 
 def review_ref(task):
@@ -506,13 +541,14 @@ def review_ref(task):
     return digest(f'{task["snapshot"]["hash"]}:{task["cycle"]}'.encode())[:12] if task['snapshot'] else None
 
 
-def validate_handoff(h):
+def validate_handoff(h, note=''):
     require(isinstance(h, dict) and set(h) == set(FIELDS), 'Use templates/handoff.json fields')
     for key in FIELDS:
         require(strings(h[key]) if key in ('files', 'memories') else text(h[key]), f'Invalid handoff field: {key}')
     for ref in h['files'] + h['memories']:
         require(local(ref).is_file(), f'Handoff reference missing: {ref} (files and memories must be existing '
                 'project-relative file paths, e.g. memories/features/T001-memories-<stamp>.json from workflow.py show)')
+    decision_journal.require_known_ids(ROOT, [h[key] for key in FIELDS if isinstance(h[key], str)], note)
     return h
 
 
@@ -654,7 +690,7 @@ def task_view(task):
         'latest': {kind: task[kind][-1] if task.get(kind) else None for kind in KINDS}}
 
 
-def context(task, config, role, limit):
+def context(task, config, role, limit, state):
     validate_task(task, config)
     definitions = roles.configured(ROOT, config)
     require(role == 'coordinator' or role in definitions, f'Unknown role {role}; configured: {", ".join(definitions)}')
@@ -696,6 +732,12 @@ def context(task, config, role, limit):
         candidates.insert(1, ('analysis_policy', {'data_access': config['analysis']['data_access']}))
     if role == 'fetcher':
         candidates.insert(0, ('sources', config['analysis']['sources']))
+    if role in ('builder', 'coordinator'):
+        related, dropped = related_memories(task, state)
+        if related:
+            candidates.insert(0, ('related_memories', related))  # Paths only; dropped last when over the limit.
+        if dropped:
+            packet['omitted'].append(f'related_memories: {dropped} older')
     if task['checkpoints']:
         checkpoint = evidence(task, 'checkpoints')
         try:
@@ -733,7 +775,7 @@ def parser():
     c.add_argument('--data-reason', default='')
     c.add_argument('--dataset', action='append', default=[])
     c.add_argument('--analysis-phase', choices=['pre', 'post'], action='append')
-    for name in ('start', 'handoff', 'review', 'test', 'memory', 'done', 'block', 'unblock', 'log', 'checkpoint', 'rebuild', 'show', 'context', 'resume', 'data-check', 'analysis-report', 'data-resolve', 'profile', 'fetch', 'claim', 'release', 'heartbeat', 'scope', 'cancel', 'reopen', 'authorize', 'changes', 'maintenance-finish', 'classify'):
+    for name in ('start', 'handoff', 'review', 'test', 'memory', 'done', 'block', 'unblock', 'log', 'checkpoint', 'rebuild', 'show', 'context', 'resume', 'data-check', 'analysis-report', 'data-resolve', 'profile', 'fetch', 'claim', 'release', 'heartbeat', 'scope', 'cancel', 'reopen', 'authorize', 'changes', 'maintenance-finish', 'classify', 'reconcile'):
         c = add(name); c.add_argument('task')
         if name in ('authorize', 'maintenance-finish'):
             c.add_argument('--file', required=True)
@@ -1190,7 +1232,7 @@ def dispatch(args):
     if cmd == 'status':
         print(encoded([task_view(t) for t in state['tasks'] if args.all or t['status'] not in coord.FINISHED])); return
     if cmd == 'check':
-        decision_journal.load(ROOT)
+        entries = decision_journal.load(ROOT)
         claimed = [t for t in state['tasks'] if coord.live_claim(t)]
         for index, first in enumerate(claimed):
             for second in claimed[index + 1:]:
@@ -1198,6 +1240,8 @@ def dispatch(args):
                         f'{first["id"]} and {second["id"]}: overlapping live claims held by different agents')
         for t in state['tasks']:
             validate_task(t, config, complete=t['status'] == 'done')
+            require(t['status'] != 'done' or decision_journal.completion_recorded(entries, t['id']),
+                    f'{t["id"]}: done with no completion milestone; run workflow.py reconcile {t["id"]}')
             require(not analysis_stale(t, config), f'{t["id"]}: analysis inspection is stale; run data-check')
             if t['snapshot'] and t['status'] in ('reviewing', 'testing'):
                 require(fresh(t, config), f'{t["id"]}: validation stale; rebuild required')
@@ -1250,9 +1294,19 @@ def dispatch(args):
     if cmd in ('context', 'resume'):
         limit = config['context']['max_chars'] if args.max_chars is None else args.max_chars
         require(2000 <= limit <= 100000, 'Context limit must be 2000..100000 characters')
-        print(context(t, config, args.role, limit)); return
+        print(context(t, config, args.role, limit, state)); return
     if cmd == 'changes':
         print(encoded(governance.manifest(sys.modules[__name__], t))); return
+    if cmd == 'reconcile':
+        require(t['status'] == 'done', 'Only done tasks can be reconciled')
+        require(not decision_journal.completion_recorded(decision_journal.load(ROOT), t['id']), f'{t["id"]} already has a completion milestone')
+        validate_task(t, config, complete=True)
+        maintenance = bool(t.get('maintenance_complete'))
+        print(milestone(('Maintenance completed: ' if maintenance else 'Task completed: ') + t['title'], task=t['id'],
+                        rationale='Recovered: the task state recorded completion, but its milestone was not written.',
+                        outcome='Completion milestone recovered; task state unchanged.',
+                        evidence=[t['handoffs'][-1]] if maintenance else [t['reviews'][-1], t['tests'][-1], t['memories'][-1], t['handoffs'][-1]]))
+        return
     require(t['status'] != 'done' or cmd == 'log', 'Completed tasks are immutable; create a follow-up')
     require(t['status'] != 'cancelled' or cmd in ('log', 'reopen'), f'{t["id"]} is cancelled; ignore it unless the user asks to reopen it')
     if cmd in ('data-check', 'analysis-report', 'data-resolve', 'profile', 'fetch'):
@@ -1416,7 +1470,9 @@ def dispatch(args):
         print('Checks passed' if t['test_pass'] else 'Checks failed; inspect test evidence')
     elif cmd == 'memory':
         require(t['status'] == 'testing' and t['test_pass'], 'Passing tests required')
-        artifact(t, 'memories', encoded(envelope(t, report=body(args.file))) + '\n')
+        report = body(args.file)
+        decision_journal.require_known_ids(ROOT, [report])
+        artifact(t, 'memories', encoded(envelope(t, report=report)) + '\n')
     elif cmd == 'done':
         governance.check_changes(sys.modules[__name__], t, config)
         require(t['status'] == 'testing', 'Task must be in testing')

@@ -227,7 +227,7 @@ def session_text(agent, source=None):
         lines.append(f'Your claims: {", ".join(t["id"] for t in mine)}. Next: workflow.py context {mine[0]["id"]} --role <role>')
         if source in ('compact', 'resume'):
             try:
-                lines += ['Resume packet:', wf.context(mine[0], config, 'coordinator', min(config['context']['max_chars'], 6000))]
+                lines += ['Resume packet:', wf.context(mine[0], config, 'coordinator', min(config['context']['max_chars'], 6000), state)]
             except (ValueError, OSError) as exc:
                 lines.append(f'Resume packet unavailable ({exc}); run workflow.py resume {mine[0]["id"]}.')
     return '\n'.join(lines)

@@ -11,6 +11,9 @@ import coordination
 FIELDS = {'id', 'timestamp', 'type', 'task', 'agent', 'decision', 'rationale', 'alternatives',
           'outcome', 'status', 'evidence', 'supersedes'}
 LEGACY_FIELDS = FIELDS - {'agent'}  # Records written before agent identity existed.
+ID_PATTERN = re.compile(r'\bJ\d{6,}\b')
+CLIP_CHARS = 160
+COMPLETION_PREFIXES = ('Task completed: ', 'Maintenance completed: ')
 
 
 def require(ok, message):
@@ -77,6 +80,27 @@ def load(root):
     return entries
 
 
+def superseded_by(entries):
+    """Map each superseded decision ID to the ID of the decision that replaced it."""
+    return {entry['supersedes']: entry['id'] for entry in entries if entry['supersedes']}
+
+
+def cited_ids(value):
+    return sorted(set(ID_PATTERN.findall(value)))
+
+
+def require_known_ids(root, values, note=''):
+    """Reject citations of journal IDs absent from this checkout's journal."""
+    known = {entry['id'] for entry in load(root)}
+    unknown = sorted({ref for value in values for ref in cited_ids(value)} - known)
+    require(not unknown, f'Unknown journal IDs: {", ".join(unknown)}. Confirm them with workflow.py journal --id; '
+                         f'IDs are local to this checkout, so record decisions on the authoritative board.{note}')
+
+
+def completion_recorded(entries, task_id):
+    return any(entry['task'] == task_id and entry['type'] == 'milestone'
+               and entry['decision'].startswith(COMPLETION_PREFIXES) for entry in entries)
+
 
 def markdown_text(value):
     # Keep every original byte in JSONL; flatten only the display of multiline text.
@@ -88,7 +112,7 @@ def markdown_text(value):
 def render(root, entries=None):
     entries = load(root) if entries is None else entries
     _, view = paths(root)
-    superseded = {entry['supersedes']: entry['id'] for entry in entries if entry['supersedes']}
+    superseded = superseded_by(entries)
     lines = ['# Decision and milestone journal', '',
              'Generated from journal.jsonl; append corrections instead of editing history.', '']
     for original in entries:
@@ -139,13 +163,17 @@ def append(root, *, kind, task, decision, rationale, alternatives, outcome, stat
     return result
 
 
+def clip(value):
+    return value if len(value) <= CLIP_CHARS else value[:CLIP_CHARS - 1] + '…'
+
+
 def query(root, *, task=None, kind=None, entry_id=None, limit=20, full=False, max_chars=6000):
     require(limit is None or type(limit) is int and limit > 0, 'Journal limit must be positive')
     require(type(max_chars) is int and 1000 <= max_chars <= 1000000, 'Journal character limit must be 1000..1000000')
     require(type(full) is bool, 'full must be boolean')
     entries = load(root)
-    superseded = {entry['supersedes']: entry['id'] for entry in entries if entry['supersedes']}
-    selected = [entry | {'superseded_by': superseded.get(entry['id'])} for entry in entries
+    superseded = superseded_by(entries)
+    selected = [entry |{'superseded_by': superseded.get(entry['id'])} for entry in entries
                 if (task is None or (entry['task'] or 'project') == task)
                 and (kind is None or entry['type'] == kind) and (entry_id is None or entry['id'] == entry_id)]
     count = len(selected)
@@ -157,8 +185,8 @@ def query(root, *, task=None, kind=None, entry_id=None, limit=20, full=False, ma
             result = {key: entry[key] for key in fields}
             clipped = []
             for key in ('decision', 'rationale', 'outcome'):
-                if len(result[key]) > 160:
-                    result[key] = result[key][:159] + '…'
+                if len(result[key]) > CLIP_CHARS:
+                    result[key] = clip(result[key])
                     clipped.append(key)
             if clipped:
                 result['truncated_fields'] = clipped
@@ -168,7 +196,7 @@ def query(root, *, task=None, kind=None, entry_id=None, limit=20, full=False, ma
               'mode': 'full' if full else 'compact',
               'retrieval_hint': 'Use --id Jxxxxxx --full for original fields; increase --max-chars if omitted.'}
     if not full:
-        result.update(excluded_fields=['alternatives', 'evidence'], field_max_chars=160)
+        result.update(excluded_fields=['alternatives', 'evidence'], field_max_chars=CLIP_CHARS)
     # Match CLI JSON formatting and account for its final newline. Remove whole
     # oldest records, not pieces of original records in full mode.
     while len(json.dumps(result, ensure_ascii=False, indent=2)) + 1 > max_chars and selected:
