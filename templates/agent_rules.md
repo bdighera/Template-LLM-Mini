@@ -162,10 +162,17 @@ Keep responses concise and prune superseded context. Before compaction run
 injects this for your claimed task). Check stale warnings before following saved
 instructions.
 
+Before planning or starting standard work, run `workflow.py recall '<topic words>'`
+(exact-word search of memories and journal decisions; try variants) and read only
+relevant hits and packet `related_memories`. Treat `superseded_by` and
+`cites_superseded` as outdated; read the replacement with `journal --id`.
+
 Record significant decisions with `workflow.py decide` (rationale, outcome,
 evidence; alternatives only when they explain a tradeoff). Workers flag decisions;
-the claim holder records them. Supersede instead of rewriting. Prefer compact
-journal queries (`journal --task`, `--id`, `--full` only when needed). Keep secrets,
+the claim holder records them. In parallel worktrees only the coordinator records
+them, on the authoritative board, even when a worker holds a local claim; journal
+IDs are local to each copy, so never cite one from a worker's copy. Supersede
+instead of rewriting. Prefer compact journal queries (`journal --task`, `--id`, `--full` only when needed). Keep secrets,
 raw data, and tool chatter out of every artifact.
 
 Changes to conventions, architecture, roles, or workflow must update every place

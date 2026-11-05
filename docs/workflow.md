@@ -82,6 +82,10 @@ its local workflow copy, covering the coordinator-assigned paths. Arrange that
 local claim through the workflow CLI; a coordinator's claim in another worktree
 does not satisfy the local guard. Keep local assignments consistent with the
 authoritative board and return reports rather than overwriting its state.
+Workers flag decisions for the coordinator to record there, even when they hold a
+local claim. Journal IDs come from each copy's line numbers, so the same ID can name
+different decisions in different worktrees; do not cite an ID from a worker's copy.
+This is policy: a worktree cannot detect that its copy is not the authoritative one.
 
 ## Task flow
 
@@ -92,7 +96,8 @@ resolve and cleanup commands. Existing v2 configurations adopt these optional
 settings only through update-config preview and approval.
 
 ```sh
-python3 scripts/workflow.py context T001 --role builder
+python3 scripts/workflow.py recall 'parser cache'            # past memories and decisions, before building
+python3 scripts/workflow.py context T001 --role builder      # lists memories of directly linked tasks
 python3 scripts/workflow.py handoff T001 --to reviewer --file handoff.json
 python3 scripts/workflow.py context T001 --role reviewer     # includes review_ref
 python3 scripts/workflow.py review T001 --verdict pass --file review.md --reviewer claude-reviewer
@@ -100,7 +105,6 @@ python3 scripts/workflow.py handoff T001 --to tester --set next_action='Run chec
 python3 scripts/workflow.py test T001
 python3 scripts/workflow.py memory T001 --file feature-memory.md
 python3 scripts/workflow.py handoff T001 --to coordinator     # attaches the latest memory
-python3 scripts/workflow.py recall 'parser cache'            # past memories ranked by keyword match
 python3 scripts/workflow.py done T001
 python3 scripts/workflow.py check
 ```
@@ -109,6 +113,17 @@ Use templates/handoff.json for the first handoff and templates/memory.md. Later
 handoffs may omit `--file`: they reuse the previous handoff's fields, with
 `--set FIELD=VALUE` overrides (`files`/`memories` take comma-separated paths). Small
 requests can use `add --prompt-text '...'` instead of `--prompt FILE`.
+
+`recall` ranks memories and journal decisions by exact query words (default 5 hits,
+`--limit` to change; milestones are not searched). Results carry `kind`, a
+`superseded_by` on replaced decisions, and `cites_superseded` on memories citing
+one. Flags depend on memories citing the ID. Builder and coordinator packets list
+`related_memories`: latest memory paths from direct `dependencies` and `follows`
+tasks, newest first, up to 5. Maintenance tasks have no memory, so neither finds them.
+
+`memory`, `handoff` and `checkpoint` reject text citing a journal ID (`J000001`) that
+is absent from this checkout's journal. Citing a superseded ID is allowed. Only new
+records are checked, and this confirms the ID exists, not that the citation fits.
 
 The review report must contain the current `review_ref` from the reviewer context;
 it changes with every build and repair cycle, so a report written against an older
@@ -265,7 +280,11 @@ dataset contracts, provenance, profiling) is documented in
 
 `.workflow/state.json` is authoritative; `TASKS.md` and `memories/index.md` are
 generated. Keep state, artifacts, and config revisions together in Git. Multi-file
-updates are not one transaction.
+updates are not one transaction. `done` and `maintenance-finish` save state before
+appending their milestone, so an interruption can leave a done task without one.
+`check` reports this, and `reconcile T001` appends the missing milestone, marked as
+recovered, without changing state. It refuses tasks that are unfinished or already
+have one. Other milestones (`authorize`, `cancel`, `reopen`) are not reconciled.
 
 ## Validate
 

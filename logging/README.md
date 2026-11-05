@@ -17,9 +17,16 @@ else an agent must record with `decide --file decision.json` (templates/decision
 6000 characters (`--max-chars` 1000..1000000). Narrow with `--task`, `--type
 decision|milestone`, or `--id`; `--all` lifts the count limit, `--full` returns
 complete records (still bounded; a record that does not fit is omitted whole and
-counted). `journal --render` rebuilds journal.md without touching the JSONL.
+counted). `journal --render` rebuilds journal.md without touching the JSONL. To
+search by topic, use `workflow.py recall '<words>'`, which ranks decisions with
+feature memories, excludes milestones, and flags superseded decisions.
+
+**Citations.** `memory`, `handoff` and `checkpoint` reject journal IDs absent from
+this journal. IDs follow line numbers in each copy, so one from another worktree may
+name a different decision; the coordinator records decisions on the authoritative board.
 
 **Failure handling.** If an append succeeds but rendering fails, the command still
 succeeds, prints the saved ID, and warns: run `journal --render`, do not append
-again. A corrupt canonical file must be repaired before further appends.
+again. A corrupt canonical file must be repaired before further appends. If `check`
+reports a done task with no completion milestone, run `reconcile TASK`.
 Append-only is command policy, not tamper-proof storage; keep the journal in Git.

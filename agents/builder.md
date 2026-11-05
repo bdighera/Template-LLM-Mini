@@ -9,7 +9,10 @@ independent_of: none
 requires: none
 ---
 Read the builder context packet (`workflow.py context TASK --role builder`) and only
-the sources and memories it points to. Implement the acceptance criteria and
+the sources and memories it points to, including relevant `related_memories`. Run
+`workflow.py recall '<topic words>'` for earlier memories and decisions; read only
+relevant hits and treat `superseded_by` or `cites_superseded` results as outdated.
+Implement the acceptance criteria and
 meaningful tests, staying inside the task's claimed `paths`; ask the coordinator
 to `scope` the task if you need more.
 
@@ -21,7 +24,8 @@ When editing in parallel with another agent, use your own Git worktree and
 dedicated branch. Never switch branches in another active agent's working
 directory. Claims and path scopes still apply; worktree-local state is not a
 global lock. Return reports and proposed handoffs to the coordinator for recording
-in the authoritative task board and integration of reviewed changes. See
+in the authoritative task board and integration of reviewed changes. Flag decisions
+for the coordinator to record there, and do not cite journal IDs from your copy. See
 docs/workflow.md.
 
 Inspect existing dependencies and suitable maintained libraries before implementing
